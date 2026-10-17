@@ -8,11 +8,11 @@ Escucha música que tengas **descargada en tu celular** o conéctalo a **tu prop
 
 <p align="center">
   <a href="https://brianperez22.github.io/brplayer/">
-    <img alt="Abrir brplayer" src="https://img.shields.io/badge/%E2%96%B6%20%20Abrir%20brplayer-e11d48?style=for-the-badge&logo=safari&logoColor=white&labelColor=1c1c1e">
+    <img alt="Abrir brplayer" src="assets/abrir-brplayer.svg" width="380">
   </a>
 </p>
 
-<p align="center"><sub>Pruébalo en línea, sin descargar nada · <a href="https://brianperez22.github.io/brplayer/">brianperez22.github.io/brplayer</a></sub></p>
+<p align="center"><sub><a href="https://brianperez22.github.io/brplayer/">brianperez22.github.io/brplayer</a></sub></p>
 
 ---
 
