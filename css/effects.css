@@ -1,0 +1,32 @@
+/* brplayer · efectos de inactividad y botones squishy */
+/* ---------- Efectos raros en inactividad (idle) ---------- */
+:root{--m:0}
+body[class*="fx-"] :is(.t b,.t small,.t .cnt,.t .cv,.t .ib,.t .x,.plc,.bar2 b,.bar2 button,.ci b,.ci small,.ci img,#empty,header input,header button){transform-origin:50% 0;animation-duration:7s;animation-timing-function:ease-in-out;animation-iteration-count:infinite}
+body[class*="fx-"] :is(.t b,.t small,.t .cnt,.t .cv,.t .ib,.t .x,.plc,.bar2 b,.bar2 button,.ci b,.ci small,.ci img,#empty,header input,header button):nth-child(2n){--r:.7;animation-duration:9s;animation-delay:-3s}
+body[class*="fx-"] :is(.t b,.t small,.t .cnt,.t .cv,.t .ib,.t .x,.plc,.bar2 b,.bar2 button,.ci b,.ci small,.ci img,#empty,header input,header button):nth-child(3n){--r:1.25;animation-duration:6s;animation-delay:-1.5s}
+body[class*="fx-"] :is(.t b,.t small,.t .cnt,.t .cv,.t .ib,.t .x,.plc,.bar2 b,.bar2 button,.ci b,.ci small,.ci img,#empty,header input,header button):nth-child(5n){--r:.5;animation-duration:11s;animation-delay:-5s}
+body.fx-melt :is(.t b,.t small,.t .cnt,.t .cv,.t .ib,.t .x,.plc,.bar2 b,.bar2 button,.ci b,.ci small,.ci img,#empty,header input,header button){animation-name:fxm;text-shadow:0 calc(var(--m)*var(--r,1)*4px) calc(var(--m)*3px) currentColor}
+body.fx-melt :is(.t b,.t small,.ci b,.ci small,.bar2 b){filter:blur(calc(var(--m)*.7px))}
+@keyframes fxm{
+ 0%,100%{transform:translateY(calc(var(--m)*var(--r,1)*2px)) scale(1,calc(1 + var(--m)*var(--r,1)*.2)) skewX(calc(var(--m)*-1.5deg))}
+ 50%{transform:translateY(calc(var(--m)*var(--r,1)*6px)) scale(calc(1 + var(--m)*.02),calc(1 + var(--m)*var(--r,1)*.5)) skewX(calc(var(--m)*1.5deg))}}
+body.fx-lsd :is(.t b,.t small,.t .cnt,.t .cv,.t .ib,.t .x,.plc,.bar2 b,.bar2 button,.ci b,.ci small,.ci img,#empty,header input,header button){animation-name:fxl;text-shadow:calc(var(--m)*-2px) 0 rgba(255,0,140,calc(var(--m)*.55)),calc(var(--m)*2px) 0 rgba(0,210,255,calc(var(--m)*.55))}
+body.fx-lsd :is(.t .cv,.ci img){filter:hue-rotate(calc(var(--m)*45deg)) saturate(calc(1 + var(--m)*.5))}
+@keyframes fxl{
+ 0%,100%{transform:translate(0,0) rotate(0) scale(1)}
+ 25%{transform:translate(calc(var(--m)*var(--r,1)*3px),calc(var(--m)*var(--r,1)*-2px)) rotate(calc(var(--m)*var(--r,1)*1.8deg)) scale(calc(1 + var(--m)*.05))}
+ 50%{transform:translate(calc(var(--m)*var(--r,1)*-2px),calc(var(--m)*var(--r,1)*3px)) rotate(calc(var(--m)*var(--r,1)*-1.4deg)) scale(calc(1 - var(--m)*.04))}
+ 75%{transform:translate(calc(var(--m)*var(--r,1)*-3px),calc(var(--m)*var(--r,1)*-1px)) rotate(calc(var(--m)*var(--r,1)*2.2deg)) scale(calc(1 + var(--m)*.06))}}
+#pxo{position:fixed;left:0;top:0;z-index:19;pointer-events:none;opacity:0;transition:opacity 1.2s}
+#pxo.on{opacity:1}#pxo.off{transition-duration:.45s}
+
+#bar{z-index:20}
+header #hb{padding:10px 12px;flex:none}#tabs #sortb{flex:none;padding:9px 12px}
+#menu{top:calc(env(safe-area-inset-top,0px) + 112px)}
+#hm{position:fixed;top:calc(env(safe-area-inset-top,0px) + 56px);left:12px;background:var(--card);border-radius:12px;box-shadow:0 6px 24px #0005;z-index:15;padding:6px;min-width:230px}
+#hm button{display:flex;width:100%;justify-content:flex-start;gap:12px;background:none;border-radius:8px;text-align:left}#hm button:active{background:var(--bg)}
+/* ---------- Botones squishy ---------- */
+button:not(:disabled),[data-a],.bd .th{transition:transform .6s cubic-bezier(.3,2.2,.5,1)}
+button:not(:disabled):active,[data-a]:active{transform:scale(1.16,.8);transition-duration:.07s}
+.ct .b-pp:active{transform:scale(1.22,.78)}
+@media (prefers-reduced-motion:reduce){button:not(:disabled):active,[data-a]:active{transform:none}}
