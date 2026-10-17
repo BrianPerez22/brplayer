@@ -53,7 +53,7 @@ async function shareT(t,time){
 async function sharePl(id){
   const p=getPl(id);if(!p)return;
   const names=p.items.filter(k=>String(k).startsWith('srv:')).map(k=>k.slice(4));
-  if(!names.length){toast('Solo se pueden compartir canciones del servidor');return}
+  if(!names.length){toast('Esta lista solo tiene canciones importadas y no se puede compartir');return}
   const ok=await copy(base()+'#'+new URLSearchParams({pl:JSON.stringify({n:p.name,s:names})}));
   toast(ok?(names.length<p.items.length?'Enlace copiado (sin las canciones importadas)':'Enlace de la playlist copiado'):'No se pudo copiar el enlace');
 }

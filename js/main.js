@@ -21,7 +21,7 @@ addEventListener('hashchange',()=>applyHash());
     local=(await tx('readonly',s=>s.getAll()))||[];
     if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
   }catch(e){}
-  try{srv=await loadServer();toast(srv.length+' canciones en el servidor')}catch(e){toast('No se pudo cargar la biblioteca del servidor')}
+  try{srv=await loadServer()}catch(e){}
   tracks=srv.concat(local);
   loading=false;
   await applySort();

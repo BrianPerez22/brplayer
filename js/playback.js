@@ -72,7 +72,7 @@ async function showInfo(){
   const t=tracks[cur];if(!t){toast('No hay canción seleccionada');return}
   if(t.remote){await remoteHead(t);await remoteTags(t)}
   const ext=(t.name.split('.').pop()||'').toLowerCase(),d=au.duration;
-  const rows=[['Título',t.title],['Artista',t.artist],['Álbum',t.album],['Archivo',t.name],['Formato',ext.toUpperCase()],['Tipo MIME',t.mime||MIME[ext]],['Tamaño',t.size?fsz(t.size):''],['Duración',isFinite(d)&&d?fmt(d):''],['Bitrate aprox.',t.size&&d?Math.round(t.size*8/d/1000)+' kbps':''],['Fecha del archivo',t.date?new Date(t.date).toLocaleString('es'):''],['Origen',t.remote?'Servidor':'Importada en este dispositivo'],['Dirección',t.remote?t.url:''],['En caché (sin conexión)',t.remote?(t.cached?'Sí':'No'):''],['Carátula',t.cover?(t.cover.type||'imagen')+' · '+fsz(t.cover.size):'Sin carátula'],...Object.entries(t.meta||{})];
+  const rows=[['Título',t.title],['Artista',t.artist],['Álbum',t.album],['Archivo',t.name],['Formato',ext.toUpperCase()],['Tipo MIME',t.mime||MIME[ext]],['Tamaño',t.size?fsz(t.size):''],['Duración',isFinite(d)&&d?fmt(d):''],['Bitrate aprox.',t.size&&d?Math.round(t.size*8/d/1000)+' kbps':''],['Fecha del archivo',t.date?new Date(t.date).toLocaleString('es'):''],['Origen',t.remote?'Biblioteca':'Importada en este dispositivo'],['Dirección',t.remote?t.url:''],['En caché (sin conexión)',t.remote?(t.cached?'Sí':'No'):''],['Carátula',t.cover?(t.cover.type||'imagen')+' · '+fsz(t.cover.size):'Sin carátula'],...Object.entries(t.meta||{})];
   $('ib').innerHTML=rows.filter(r=>r[1]!==''&&r[1]!=null).map(r=>`<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join('');
   $('inf').hidden=false;
 }
@@ -139,7 +139,7 @@ async function seekFix(t,sec){
     if(caching.has(t)){while(caching.has(t))await new Promise(r=>setTimeout(r,300))}else await cacheTrack(t);
     if(tracks[cur]!==t)return;
     const m=window.caches&&await caches.match(t.url);
-    if(!m){toast('El servidor no permite saltar en esta canción');syncSk();return}
+    if(!m){toast('No se puede saltar en esta canción');syncSk();return}
     const u=URL.createObjectURL(await m.blob());
     if(tracks[cur]!==t||url){URL.revokeObjectURL(u);return}
     url=u;t.cached=1;restore=sec;seekUntil=performance.now()+2500;au.src=u;au.loop=repeat==2;

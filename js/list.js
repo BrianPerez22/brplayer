@@ -110,7 +110,7 @@ function render(){
   if(view=='queue'){head=`<div class="bar2"><b>Cola de reproducción</b><span class="sp"></span><button data-a="qclear">Vaciar</button></div>`;msg='La cola está vacía.<br>Usa el botón de tres puntos de una canción para agregarla.'}
   else if(view.startsWith('pl:')){const p=getPl(view.slice(3));if(!p){view='pls';render();return}
     head=`<div class="bar2"><button class="ib" data-a="plback" aria-label="Volver">${ic('back',22)}</button><b>${esc(p.name)}</b><span class="sp"></span><button data-a="plplay">${ic('play',16)}Reproducir</button><button data-a="plshare" aria-label="Compartir playlist">${ic('share',18)}</button></div>`;msg='Esta playlist está vacía.<br>Agrega canciones desde el botón de tres puntos.'}
-  else if(!tracks.length)msg=loading?'Cargando biblioteca…':'No hay canciones.<br>Revisa el servidor o toca <b>Añadir</b> para importar archivos.';
+  else if(!tracks.length)msg=loading?'Cargando biblioteca…':'No hay canciones.<br>Toca <b>Añadir</b> para importar archivos.';
   else msg='Sin resultados.';
   const a=listFor();let recH='';
   if(view.startsWith('pl:')){const rs=getRecs(view.slice(3));if(rs.length)recH=`<div class="bar2"><b>Recomendaciones</b><span class="sp"></span><button class="ib" data-a="recr" aria-label="Otras recomendaciones">${ic('dice',20)}</button></div>`+rs.map(t=>rowH({t,i:tracks.indexOf(t),ap:1})).join('')}
@@ -153,7 +153,7 @@ async function delTrack(i){
 }
 async function clr(){
   if(!tracks.some(t=>!t.remote)){toast('No hay canciones importadas');return}
-  if(!confirm('¿Borrar las canciones importadas en este dispositivo? La biblioteca del servidor no se toca.'))return;
+  if(!confirm('¿Borrar las canciones importadas en este dispositivo?'))return;
   try{await tx('readwrite',s=>s.clear())}catch(_){}
   const c=tracks[cur];tracks=tracks.filter(t=>t.remote);hist=[];shufQ=null;queue=queue.filter(t=>t.remote);
   if(c&&!c.remote){au.pause();au.removeAttribute('src');cur=-1;updateNow()}else cur=c?tracks.indexOf(c):-1;
