@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>brplayer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Música">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/visualizer.css">
+<link rel="stylesheet" href="css/effects.css">
+<link rel="stylesheet" href="css/equalizer.css">
+<link rel="stylesheet" href="css/library.css">
+</head>
+<body>
+<header>
+  <button id="hb" data-a="hm" data-ic="menu" data-s="22" aria-label="Menú"></button>
+  <input type="search" id="q" placeholder="Buscar…">
+  <nav id="tabs"><button data-v="pls" data-ic="heart" data-s="20" aria-label="Favoritos"></button><button data-v="lib">Biblioteca</button><button data-v="recent">Recientes</button><button data-v="queue">Cola <span id="qn"></span></button><button id="sortb" data-a="sort" data-ic="sort" aria-label="Ordenar"></button></nav>
+</header>
+<div id="menu" hidden></div>
+<div id="hm" hidden><button data-a="add" data-ic="plus" data-s="20">Añadir canciones</button><button data-a="eq" data-ic="eq" data-s="20">Ecualizador</button><button data-a="off" data-ic="dl" data-s="20"><span id="offl">Sin conexión: desactivado</span></button><button data-a="dlcur" data-ic="dlf" data-s="20">Descargar canción actual</button><button data-a="clr" data-ic="trash" data-s="20">Borrar importadas</button></div>
+<input type="file" id="file" multiple accept="audio/*,.mp3,.flac,.m4a,.aac,.wav,.ogg,.opus,.aif,.aiff,.alac,.caf" hidden>
+<div id="list"></div>
+<div id="toast"></div>
+
+<div id="bar">
+  <div id="bgrab" role="button" aria-label="Minimizar o expandir controles"><i></i></div>
+  <div id="now"><img id="cv" class="cv" data-a="fs" alt=""><div id="nt" data-a="fs"><b id="tt">Sin reproducción</b><small id="ta">Cargando biblioteca…</small></div>
+    <button class="ib b-fav" data-a="fav" aria-label="Favorita"></button>
+    <button class="ib" data-a="share" data-ic="share" aria-label="Compartir"></button>
+    <button class="ib" data-a="info" data-ic="info" aria-label="Información"></button>
+    <button class="ib" data-a="fs" data-ic="expand" aria-label="Pantalla completa"></button></div>
+  <div class="skw"><canvas class="skc"></canvas><input type="range" class="sk" min="0" max="1000" value="0" aria-label="Posición"></div>
+  <div class="tm"><span class="tc">0:00</span><span class="td">0:00</span></div>
+  <div class="ct">
+    <button class="b-shuf" data-a="shuf" data-ic="shuf" data-s="24" aria-label="Aleatorio"></button>
+    <button data-a="prev" data-ic="prev" data-s="26" aria-label="Anterior"></button>
+    <button class="b-pp" data-a="pp" aria-label="Play/Pausa"></button>
+    <button data-a="next" data-ic="next" data-s="26" aria-label="Siguiente"></button>
+    <button class="b-rep" data-a="rep" data-ic="rep" data-s="24" aria-label="Repetir"></button>
+  </div>
+  <div class="ex">
+    <div id="orb" data-a="ball" aria-label="Indicador de reproducción"><i id="ball"></i></div>
+  </div>
+</div>
+
+<div id="fs" hidden>
+  <div class="top"><button class="ib" data-a="fsx" data-ic="down" data-s="28" aria-label="Cerrar"></button><span><button class="ib" data-a="eq" data-ic="eq" data-s="24" aria-label="Ecualizador"></button><button class="ib" data-a="vzm" data-ic="viz" data-s="24" aria-label="Visualizaciones"></button><button class="ib" data-a="vzf" data-ic="full" data-s="24" aria-label="Visualización a pantalla completa"></button><button class="ib b-fav" data-a="fav" data-s="24" aria-label="Favorita"></button><button class="ib" data-a="share" data-ic="share" data-s="24" aria-label="Compartir"></button><button class="ib" data-a="info" data-ic="info" data-s="24" aria-label="Información"></button></span></div>
+  <div id="stage"><img id="fcv" class="cv" alt=""><canvas id="vz"></canvas><div id="vlab"></div>
+    <div id="vmini"><img id="vmc" class="cv" alt=""><div class="tx"><b id="vmt"></b><small id="vma"></small></div></div>
+    <div id="vhud"><div class="orb" data-a="vorb" aria-label="Cambiar animación"><i class="bl"></i></div><div class="tx"><b id="vmn"></b></div><button class="ib b-pp" data-a="pp" aria-label="Play/Pausa"></button><button class="ib" data-a="vzf" data-ic="close" data-s="22" aria-label="Salir de pantalla completa"></button></div></div>
+  <div class="meta"><b id="ftt"></b><small id="fta"></small></div>
+  <div class="bt">
+    <div class="skw"><canvas class="skc"></canvas><input type="range" class="sk" min="0" max="1000" value="0" aria-label="Posición"></div>
+    <div class="tm"><span class="tc">0:00</span><span class="td">0:00</span></div>
+    <div class="ct">
+      <button class="b-shuf" data-a="shuf" data-ic="shuf" data-s="26" aria-label="Aleatorio"></button>
+      <button data-a="prev" data-ic="prev" data-s="30" aria-label="Anterior"></button>
+      <button class="b-pp" data-a="pp" aria-label="Play/Pausa"></button>
+      <button data-a="next" data-ic="next" data-s="30" aria-label="Siguiente"></button>
+      <button class="b-rep" data-a="rep" data-ic="rep" data-s="26" aria-label="Repetir"></button>
+    </div>
+    <div class="orb" data-a="vorb" aria-label="Cambiar animación"><i class="bl"></i></div>
+  </div>
+</div>
+
+<div id="inf" hidden><div class="card"><div class="mh"><b>Información de la canción</b><button class="ib" data-a="infx" data-ic="close" aria-label="Cerrar"></button></div><dl id="ib"></dl><button class="sb" id="dlb" data-a="dlcur" data-ic="dlf" data-s="20" hidden>Descargar al dispositivo</button></div></div>
+
+<div id="sheet" class="ovl" hidden><div class="card"><b id="sht"></b><div id="shb"></div></div></div>
+
+<audio id="au" preload="auto" playsinline></audio>
+
+<script defer src="js/core.js"></script>
+<script defer src="js/tags.js"></script>
+<script defer src="js/list.js"></script>
+<script defer src="js/playback.js"></script>
+<script defer src="js/playlists.js"></script>
+<script defer src="js/favorites.js"></script>
+<script defer src="js/download.js"></script>
+<script defer src="js/accent.js"></script>
+<script defer src="js/equalizer.js"></script>
+<script defer src="js/visualizer.js"></script>
+<script defer src="js/input.js"></script>
+<script defer src="js/progress-fx.js"></script>
+<script defer src="js/idle-fx.js"></script>
+<script defer src="js/main.js"></script>
+</body>
+</html>
