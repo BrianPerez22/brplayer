@@ -16,8 +16,11 @@ function dlName(t){
   return n;
 }
 
-/* Descarga el archivo completo mostrando el progreso */
+/* Usa la copia de la precarga si existe (no gasta datos); si no, descarga el archivo mostrando el progreso */
 async function dlFetch(t,on){
+  if(window.caches){
+    try{const m=await caches.match(t.url);if(m){const b=await m.blob();if(b.size){on&&on(1,1);return b}}}catch(e){}
+  }
   const r=await fetch(t.url);
   if(!r.ok)throw new Error('HTTP '+r.status);
   const total=+r.headers.get('content-length')||t.size||0,type=r.headers.get('content-type')||'';

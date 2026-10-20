@@ -1,5 +1,5 @@
 /* brplayer · service worker: guarda la app (HTML, CSS, JS) para abrirla sin conexión.
-   No toca el audio ni /api/: las canciones nunca se guardan en caché; solo se conserva la última lista del servidor en el almacenamiento local. */
+   No toca el audio ni /api/: el audio y la lista siguen su propia lógica (precarga de audio en la caché 'player-audio-v1' y lista guardada). */
 const V='brplayer-shell-v2';
 const SHELL=['./','index.html','css/base.css','css/visualizer.css','css/effects.css','css/equalizer.css','css/library.css',
   'js/core.js','js/tags.js','js/list.js','js/playback.js','js/playlists.js','js/favorites.js','js/download.js','js/select.js','js/library.js','js/extras.js',

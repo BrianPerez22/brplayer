@@ -12,8 +12,7 @@ try{
 }catch(e){}
 
 /* ---------- Inicio ---------- */
-/* versiones anteriores guardaban canciones en caché: se limpia ese espacio */
-try{if(window.caches)caches.delete('player-audio-v1').catch(()=>{});localStorage.removeItem('offline')}catch(e){}
+try{localStorage.removeItem('offline')}catch(e){} /* el modo manual "Sin conexión" ya no existe */
 setPP(false);sync();updTabs();syncFav();
 addEventListener('hashchange',()=>applyHash());
 (async()=>{

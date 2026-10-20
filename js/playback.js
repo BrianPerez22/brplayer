@@ -8,7 +8,10 @@ async function load(i,play,push=true){
   cur=i;
   if(url){URL.revokeObjectURL(url);url=null}
   let src=t.url;
-  if(!t.remote){url=URL.createObjectURL(t.blob);src=url}
+  if(t.remote){
+    if(window.caches){try{const m=await caches.match(t.url);if(m){const u=URL.createObjectURL(await m.blob());if(tok!==loadTok){URL.revokeObjectURL(u);return}url=u;src=u;t.cached=1}}catch(e){}}
+    if(tok!==loadTok)return;
+  }else{url=URL.createObjectURL(t.blob);src=url}
   au.src=src;au.loop=repeat==2;counted=false;
   if(play){const p=au.play();if(p)p.catch(()=>{})}
   render();await updateNow();
@@ -16,6 +19,7 @@ async function load(i,play,push=true){
   try{history.replaceState(null,'','#'+new URLSearchParams({c:t.sid||t.name}))}catch(e){}
   localStorage.setItem('last',t.id);
   t.th=0;ensureThumb(t,true);
+  setTimeout(()=>{if(tracks[cur]!==t)return;const n=peek();(n?cacheTrack(n):Promise.resolve()).then(()=>tracks[cur]===t&&cacheTrack(t))},1500);
 }
 async function updateNow(){
   const t=tracks[cur];
@@ -132,12 +136,14 @@ function seekTo(sec){
 async function seekFix(t,sec){
   if(!t.remote||url||seekFixing)return;seekFixing=1;const was=!au.paused;
   try{
-    /* el servidor no admite Range: se baja la canción a memoria (no se guarda) para poder saltar */
-    toast('Este servidor no permite saltar: descargando la canción…');
-    const b=await dlFetch(t);
-    if(tracks[cur]!==t||url)return;
-    const u=URL.createObjectURL(new Blob([b],{type:MIME[dlExt(t)]||b.type||'audio/mpeg'}));
-    url=u;restore=sec;seekUntil=performance.now()+2500;au.src=u;au.loop=repeat==2;
+    toast('Descargando la canción para poder saltar…');
+    if(caching.has(t)){while(caching.has(t))await new Promise(r=>setTimeout(r,300))}else await cacheTrack(t);
+    if(tracks[cur]!==t)return;
+    const m=window.caches&&await caches.match(t.url);
+    if(!m){toast('No se puede saltar en esta canción');syncSk();return}
+    const u=URL.createObjectURL(await m.blob());
+    if(tracks[cur]!==t||url){URL.revokeObjectURL(u);return}
+    url=u;t.cached=1;restore=sec;seekUntil=performance.now()+2500;au.src=u;au.loop=repeat==2;
     if(was){const p=au.play();if(p)p.catch(()=>{})}
   }catch(e){toast('No se puede saltar en esta canción');syncSk()}finally{seekFixing=0}
 }

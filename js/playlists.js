@@ -14,7 +14,33 @@ const getPl=id=>{id=String(id);
 const key=t=>String(t.id);
 const plTracks=id=>{const p=getPl(id);if(!p)return[];const m=new Map(tracks.map(t=>[key(t),t]));return p.items.map(k=>m.get(String(k))).filter(Boolean)};
 const base=()=>location.href.split('#')[0];
-const qchg=()=>{updTabs();if(view=='queue')render()};
+const qchg=()=>{updTabs();if(view=='queue')render();preload()};
+function peek(){
+  while(queue.length&&!tracks.includes(queue[0]))queue.shift();
+  if(queue.length)return queue[0];
+  if(plCtx&&!repeat){const r=plRandom();if(r)return r}
+  if(plCtx&&repeat==1){const a=plTracks(plCtx.id);if(a.length)return a[0]}
+  const n=tracks.length;if(!n)return null;
+  if(shuffle&&n>1){
+    if(shufQ)shufQ=shufQ.filter(t=>tracks.includes(t)&&t!==tracks[cur]);
+    if(!shufQ||!shufQ.length){if(shufQ&&!repeat)return null;mkQ()}
+    return shufQ[0]||null;
+  }
+  return cur+1<n?tracks[cur+1]:(repeat==1?tracks[0]:null);
+}
+/* Precarga: la canción siguiente y la actual se guardan en caché (máx. 40) para que el salto y el cambio sean inmediatos */
+const CN='player-audio-v1',caching=new Set();
+async function cacheTrack(t){
+  if(!t||!t.remote||t.cached||caching.has(t)||!window.caches)return;
+  caching.add(t);
+  try{
+    const c=await caches.open(CN);
+    if(await c.match(t.url)){t.cached=1;return}
+    const r=await fetch(t.url);
+    if(r.status==200){await c.put(t.url,r);t.cached=1;const ks=await c.keys();if(ks.length>40)await c.delete(ks[0])}
+  }catch(e){}finally{caching.delete(t)}
+}
+function preload(){const n=peek();if(n)cacheTrack(n)}
 async function copy(s){
   try{await navigator.clipboard.writeText(s);return true}catch(e){
     const a=document.createElement('textarea');a.value=s;a.style.cssText='position:fixed;opacity:0';document.body.appendChild(a);a.select();
@@ -74,6 +100,7 @@ function plMenu(id){
 }
 Object.assign(A,{share:()=>{const t=tracks[cur];t?shareT(t,true):toast('No hay canción seleccionada')},newpl:newPl,
   plback:()=>{view='pls';render()},plplay:()=>playPl(view.slice(3)),plshare:()=>sharePl(view.slice(3)),qclear:()=>{queue=[];qchg();render()}});
+{const s=A.shuf,r=A.rep;A.shuf=()=>{s();preload()};A.rep=()=>{r();preload()}}
 $('tabs').onclick=e=>{const b=e.target.closest('[data-v]');if(b){view=b.dataset.v;vstack=[];recFor='';render()}};
 async function applyHash(){
   const H=new URLSearchParams(location.hash.slice(1));

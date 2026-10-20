@@ -47,8 +47,8 @@ Eso es todo. Para tenerlo como una app, en iPhone/iPad usa **Compartir → Añad
 - **Cola reordenable**: arrastra el asa de una canción de la cola.
 - **Actualizar biblioteca** desde ☰ (también se actualiza sola al volver a la app tras un rato).
 - La búsqueda **ignora mayúsculas y acentos** ("cancion" encuentra "Canción").
-- **Las canciones no se guardan en caché**: se reproducen en streaming y solo se descargan cuando tú lo pides.
-- La app (HTML, CSS y JS) se abre **sin conexión** gracias a un service worker (solo con HTTPS o localhost); la música del servidor sí necesita conexión.
+- **Precarga automática**: la canción siguiente y la actual se guardan en caché (máx. 40 canciones) para que el cambio y el salto sean inmediatos. No hay modo manual de "sin conexión".
+- La app (HTML, CSS y JS) se abre **sin conexión** gracias a un service worker (solo con HTTPS o localhost); la música del servidor solo suena sin conexión si ya estaba precargada.
 - Gestos: desliza una fila hacia la derecha para enviarla a la cola, o hacia los lados para cambiar de pestaña.
 
 ### Sonido
@@ -103,8 +103,8 @@ Por defecto, la app consulta `/api/canciones` en el mismo dominio donde está al
 - `titulo`, `artista`, `album`, `pista` y `caratula` (opcionales): evitan que la app lea los primeros 2 MB de cada archivo para obtener las etiquetas.
 - La `url` puede llevar espacios, tildes, `#` o `?` en el nombre: la app codifica la ruta sin duplicar lo ya codificado. Una consulta real (`?clave=valor`) se respeta.
 - Si el nombre sigue el formato `Artista - Título.ext`, el artista y el título se separan automáticamente (si el archivo trae etiquetas, tienen prioridad).
-- El servidor de audio debe aceptar **peticiones Range** de HTTP para poder saltar a cualquier punto de la canción. Si no las admite, al saltar la app descarga esa canción a memoria (sin guardarla) para poder hacerlo.
-- La descarga al dispositivo usa la misma `url` y funciona en el mismo dominio (o con CORS habilitado).
+- El servidor de audio debe aceptar **peticiones Range** de HTTP para poder saltar a cualquier punto de la canción. Si no las admite, al saltar la app descarga esa canción completa para poder hacerlo.
+- La descarga al dispositivo usa la misma `url` y funciona en el mismo dominio (o con CORS habilitado); si la canción ya está precargada, no vuelve a gastar datos.
 
 La lista del servidor se guarda en el dispositivo, así que la biblioteca sigue apareciendo aunque pierdas la conexión un momento.
 

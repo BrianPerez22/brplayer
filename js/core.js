@@ -65,6 +65,7 @@ async function _remoteTags(t){
   if(t.srvTags){try{if(t.coverUrl&&!t.cover){const r=await fetch(t.coverUrl);if(r.ok)t.cover=await r.blob()}}catch(e){t.tagsDone=false;t.tagsP=null}return}
   try{
     let b=null;
+    if(window.caches){try{const m=await caches.match(t.url);if(m){const fb=await m.blob();if(!t.size)t.size=fb.size;b=fb.slice(0,2097152)}}catch(e){}}
     if(!b){
       const ctl=new AbortController();
       const r=await fetch(t.url,{headers:{Range:'bytes=0-2097151'},signal:ctl.signal});
