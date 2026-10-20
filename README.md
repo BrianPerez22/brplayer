@@ -42,7 +42,13 @@ Eso es todo. Para tenerlo como una app, en iPhone/iPad usa **Compartir → Añad
 - **Compartir** canciones y playlists mediante un enlace.
 - **Descargar al dispositivo** las canciones de tu servidor (menú de tres puntos de la canción, ficha de información o menú ☰): guarda el archivo original en Descargas / Archivos. No afecta a *Añadir canciones*.
 - Controles en la **pantalla de bloqueo y los auriculares** (Media Session).
-- **Modo sin conexión**: guarda la canción actual, las 3 anteriores y las 3 siguientes.
+- **Selección múltiple**: mantén pulsada una canción (o ☰ → *Seleccionar canciones*, o ⋯ → *Seleccionar varias*) y toca las demás. Con la selección puedes reproducirla, ponerla en la cola o a continuación, **guardarla en favoritas**, **agregarla a una playlist**, quitarla de la playlist actual, **descargarla** (varias canciones se entregan en un único ZIP) o eliminar las importadas. En el ordenador, clic derecho también entra en el modo; **Esc** sale.
+- **Velocidad de reproducción** (con el tono intacto) y **temporizador de apagado** (minutos o al terminar la canción), en ☰.
+- **Cola reordenable**: arrastra el asa de una canción de la cola.
+- **Actualizar biblioteca** desde ☰ (también se actualiza sola al volver a la app tras un rato).
+- La búsqueda **ignora mayúsculas y acentos** ("cancion" encuentra "Canción").
+- **Las canciones no se guardan en caché**: se reproducen en streaming y solo se descargan cuando tú lo pides.
+- La app (HTML, CSS y JS) se abre **sin conexión** gracias a un service worker (solo con HTTPS o localhost); la música del servidor sí necesita conexión.
 - Gestos: desliza una fila hacia la derecha para enviarla a la cola, o hacia los lados para cambiar de pestaña.
 
 ### Sonido
@@ -66,7 +72,7 @@ Eso es todo. Para tenerlo como una app, en iPhone/iPad usa **Compartir → Añad
 | ← / → | Cambiar de modo del visualizador |
 | F | Visualizador inmersivo |
 | V | Menú del visualizador |
-| Esc | Salir del visualizador |
+| Esc | Salir de la selección múltiple / del visualizador |
 
 ---
 
@@ -93,8 +99,12 @@ Por defecto, la app consulta `/api/canciones` en el mismo dominio donde está al
 ```
 
 - `nombre` y `url` son obligatorios; `fecha` y `size` son opcionales.
+- `id` (opcional): identificador estable de la canción. Si lo envías, **renombrar el archivo no pierde favoritos, playlists ni estadísticas**. Sin `id`, la app intenta reconectar los archivos renombrados por su tamaño exacto (si es único).
+- `titulo`, `artista`, `album`, `pista` y `caratula` (opcionales): evitan que la app lea los primeros 2 MB de cada archivo para obtener las etiquetas.
+- La `url` puede llevar espacios, tildes, `#` o `?` en el nombre: la app codifica la ruta sin duplicar lo ya codificado. Una consulta real (`?clave=valor`) se respeta.
 - Si el nombre sigue el formato `Artista - Título.ext`, el artista y el título se separan automáticamente (si el archivo trae etiquetas, tienen prioridad).
-- El servidor de audio debe aceptar **peticiones Range** de HTTP para poder saltar a cualquier punto de la canción.
+- El servidor de audio debe aceptar **peticiones Range** de HTTP para poder saltar a cualquier punto de la canción. Si no las admite, al saltar la app descarga esa canción a memoria (sin guardarla) para poder hacerlo.
+- La descarga al dispositivo usa la misma `url` y funciona en el mismo dominio (o con CORS habilitado).
 
 La lista del servidor se guarda en el dispositivo, así que la biblioteca sigue apareciendo aunque pierdas la conexión un momento.
 
@@ -113,8 +123,9 @@ Estructura de la versión modular:
 brplayer/
 ├── index.html
 ├── css/   base · visualizer · effects · equalizer · library
-└── js/    core · tags · list · playback · playlists · favorites · download · accent
-           equalizer · visualizer · input · progress-fx · idle-fx · main
+├── sw.js  service worker (solo guarda la app, nunca la música)
+└── js/    core · tags · list · playback · playlists · favorites · download · select · library
+           extras · accent · equalizer · visualizer · input · progress-fx · idle-fx · main
 ```
 
 Los scripts son archivos normales (no módulos ES) y se cargan con `defer` en el orden indicado arriba, así que también funcionan abriendo `index.html` sin servidor.

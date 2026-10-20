@@ -12,7 +12,9 @@ try{
 }catch(e){}
 
 /* ---------- Inicio ---------- */
-setPP(false);sync();updTabs();syncFav();updOffLbl();
+/* versiones anteriores guardaban canciones en caché: se limpia ese espacio */
+try{if(window.caches)caches.delete('player-audio-v1').catch(()=>{});localStorage.removeItem('offline')}catch(e){}
+setPP(false);sync();updTabs();syncFav();
 addEventListener('hashchange',()=>applyHash());
 (async()=>{
   render();
@@ -21,12 +23,13 @@ addEventListener('hashchange',()=>applyHash());
     local=(await tx('readonly',s=>s.getAll()))||[];
     if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
   }catch(e){}
-  try{srv=await loadServer()}catch(e){}
+  try{srv=await loadServer();srvErr=''}catch(e){srvErr=(e&&e.message)||'error'}
   tracks=srv.concat(local);
   loading=false;
   sortTracks();render();
   applySort(); /* las fechas que falten se piden en segundo plano; no bloquean el arranque */
-  markCached();
+  if(srvStale)toast('Sin conexión con el servidor: se muestra la lista guardada');
+  afterServer(srv);
   if(await applyHash())return;
   if(tracks.length){
     const id=localStorage.getItem('last');let i=tracks.findIndex(t=>String(t.id)==id);

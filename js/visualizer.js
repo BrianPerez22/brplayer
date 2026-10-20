@@ -142,8 +142,10 @@ function conn(){
   if(an!==AE.an){ac=AE.ac;an=AE.an;F=new Uint8Array(an.frequencyBinCount);T=new Uint8Array(an.fftSize).fill(128)}
   if(ac.state!='running')ac.resume().catch(()=>{});return true;
 }
+/* movimiento reducido: va más lento, sin destellos por golpe y sin pasar solo a un modo animado */
+const RM=matchMedia('(prefers-reduced-motion:reduce)');
 function ana(now){
-  const dt=Math.max(.001,Math.min(.05,(now-last)/1000||.016));last=now;S.dt=dt;S.t+=dt;
+  const dt=Math.max(.001,Math.min(.05,(now-last)/1000||.016))*(RM.matches?.5:1);last=now;S.dt=dt;S.t+=dt;
   if(an){an.getByteFrequencyData(F);an.getByteTimeDomainData(T)}
   let mx=0;for(let i=0;i<2048;i+=2){const d=Math.abs(T[i]-128);if(d>mx)mx=d}
   S.amp=Math.max(mx/128,S.amp*.996);S.g=Math.min(3,.7/Math.max(.12,S.amp));
@@ -153,6 +155,7 @@ function ana(now){
   S.avg=S.avg*.96+S.bass*.04;S.hit=0;
   if(S.bass>S.avg*1.28+.04&&S.bass>.3&&S.t-S.lb>.2){S.hit=1;S.lb=S.t;S.beat=1}
   S.beat*=Math.pow(.02,dt);
+  if(RM.matches){S.hit=0;S.beat=Math.min(S.beat,.2)}
   S.hue=window.RGBH!=null?window.RGBH:(S.hue+dt*14+S.hit*25)%360;
 }
 function frame(now){
@@ -187,7 +190,7 @@ function mini(){$('vmc').src=$('fcv').src;$('vmt').textContent=$('ftt').textCont
 function hud(v){clearTimeout(ht);fsEl.classList.toggle('hud',v);if(v){mini();ht=setTimeout(()=>fsEl.classList.remove('hud'),3200)}}
 function imm(v){
   if(v===undefined)v=!immOn;
-  if(v&&mi==0)setMode(1);
+  if(v&&mi==0&&!RM.matches)setMode(1);
   immOn=v;fsEl.classList.toggle('imm',v);hud(v);
   try{
     if(v){const r=(fsEl.requestFullscreen||fsEl.webkitRequestFullscreen);r&&Promise.resolve(r.call(fsEl)).catch(()=>{});

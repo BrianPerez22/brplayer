@@ -18,10 +18,11 @@
 <header>
   <button id="hb" data-a="hm" data-ic="menu" data-s="22" aria-label="Menú"></button>
   <input type="search" id="q" placeholder="Buscar…">
+  <div id="selbar" hidden><button class="ib" data-a="selx" data-ic="close" data-s="22" aria-label="Salir de la selección"></button><b id="seln">Elige canciones</b><span class="sp"></span><button data-a="selall">Todo</button><button class="acc" data-a="selact" data-ic="more" data-s="20">Acciones</button></div>
   <nav id="tabs"><button data-v="pls" data-ic="heart" data-s="20" aria-label="Favoritos"></button><button data-v="lib">Biblioteca</button><button data-v="recent">Recientes</button><button data-v="queue">Cola <span id="qn"></span></button><button id="sortb" data-a="sort" data-ic="sort" aria-label="Ordenar"></button></nav>
 </header>
 <div id="menu" hidden></div>
-<div id="hm" hidden><button data-a="add" data-ic="plus" data-s="20">Añadir canciones</button><button data-a="eq" data-ic="eq" data-s="20">Ecualizador</button><button data-a="off" data-ic="dl" data-s="20"><span id="offl">Sin conexión: desactivado</span></button><button data-a="dlcur" data-ic="dlf" data-s="20">Descargar canción actual</button><button data-a="clr" data-ic="trash" data-s="20">Borrar importadas</button></div>
+<div id="hm" hidden><button data-a="add" data-ic="plus" data-s="20">Añadir canciones</button><button data-a="sel" data-ic="check" data-s="20">Seleccionar canciones</button><button data-a="refl" data-ic="refresh" data-s="20">Actualizar biblioteca</button><button data-a="eq" data-ic="eq" data-s="20">Ecualizador</button><button data-a="spd" data-ic="speed" data-s="20"><span id="spdl">Velocidad: 1×</span></button><button data-a="slp" data-ic="clock" data-s="20"><span id="slpl">Temporizador de apagado</span></button><button data-a="dlcur" data-ic="dlf" data-s="20">Descargar canción actual</button><button data-a="clr" data-ic="trash" data-s="20">Borrar importadas</button></div>
 <input type="file" id="file" multiple accept="audio/*,.mp3,.flac,.m4a,.aac,.wav,.ogg,.opus,.aif,.aiff,.alac,.caf" hidden>
 <div id="list"></div>
 <div id="toast"></div>
@@ -80,6 +81,9 @@
 <script defer src="js/playlists.js"></script>
 <script defer src="js/favorites.js"></script>
 <script defer src="js/download.js"></script>
+<script defer src="js/select.js"></script>
+<script defer src="js/library.js"></script>
+<script defer src="js/extras.js"></script>
 <script defer src="js/accent.js"></script>
 <script defer src="js/equalizer.js"></script>
 <script defer src="js/visualizer.js"></script>

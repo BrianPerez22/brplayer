@@ -89,7 +89,8 @@ const IDLE=(()=>{
     else done&&done();
   }
   const arm=()=>{clearTimeout(tm);tm=setTimeout(go,ms)};
-  function go(){if(document.hidden||!inList()){arm();return}on=true;begin(pick(pool()))}
+  const calmFx=matchMedia('(prefers-reduced-motion:reduce)');
+  function go(){if(document.hidden||!inList()||calmFx.matches){arm();return}on=true;begin(pick(pool()))}
   function off(){on=false;end(true)}
   function act(e){
     if(e&&e.type=='pointermove'&&Math.hypot(e.clientX-lx,e.clientY-ly)<3)return;

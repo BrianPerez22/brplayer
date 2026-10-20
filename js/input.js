@@ -7,7 +7,7 @@
  const reset=r=>{if(!r)return;r.style.transition='transform .55s cubic-bezier(.3,2,.5,1)';r.style.transform='';setTimeout(()=>{r.classList.remove('sw');r.style.transition=''},600)};
  L.addEventListener('pointerdown',e=>{
    if((e.pointerType=='mouse'&&e.button!=0)||e.target.closest('.car,input')){st=null;return}
-   st={x:e.clientX,y:e.clientY,id:e.pointerId,dir:0,row:(view=='lib'||isGrp(view))?e.target.closest('.t[data-i]'):null}});
+   st={x:e.clientX,y:e.clientY,id:e.pointerId,dir:0,row:(!selMode&&(view=='lib'||isGrp(view)))?e.target.closest('.t[data-i]'):null}});
  L.addEventListener('pointermove',e=>{
    if(!st||e.pointerId!=st.id)return;const dx=e.clientX-st.x,dy=e.clientY-st.y;
    if(!st.dir){if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)){st=null;return}
@@ -30,6 +30,7 @@
   const typing=e=>/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)&&e.target.type!='range';
   addEventListener('keydown',e=>{
     if(e.ctrlKey||e.metaKey||e.altKey)return;
+    if(e.key=='Escape'&&selMode&&$('sheet').hidden&&!typing(e)){exitSel();return}
     if(e.code=='Space'){
       if(typing(e))return;e.preventDefault();if(e.repeat||sp)return;
       sp=setTimeout(()=>{sp=-1;hd=true;if(!rgbRAF)rgbStart()},450);return;

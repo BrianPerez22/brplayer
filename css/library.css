@@ -16,5 +16,29 @@
 .gh .tx>b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:20px;line-height:1.2;word-break:break-word}
 .gh .tx>small{display:block;color:var(--mut);margin-top:3px}
 .gh .gb{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.cd{color:var(--acc);margin-left:6px;display:inline-block;vertical-align:-2px}.cd svg{display:inline-block}
 #hm button span{flex:1}
+
+/* cola reordenable */
+.gp{display:flex;flex:none;padding:8px 4px;color:var(--mut);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.t[data-qi]{transition:transform .15s}
+.t.drag{position:relative;z-index:3;background:var(--card);box-shadow:0 4px 18px #0004;border-radius:10px;transition:none;cursor:grabbing}
+#empty button{margin-top:4px}
+#empty small{display:inline;font-size:13px}
+#hm{max-height:calc(100vh - 90px);overflow:auto}
+/* movimiento reducido: sin animaciones ni transiciones decorativas */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* selección múltiple */
+.t{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.ck{display:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--mut);flex:none;align-items:center;justify-content:center;color:transparent}
+.selm .t .ck{display:flex}
+.selm .t .ib,.selm .t .x,.selm .t .gp,.selm .t .cnt{display:none}
+.t.sel .ck{background:var(--acc);border-color:var(--acc);color:#fff}
+.t.sel{background:color-mix(in srgb,var(--acc) 12%,transparent);border-radius:10px}
+.ci.sel img{outline:3px solid var(--acc);outline-offset:-3px}
+.ci.sel b{color:var(--acc)}
+#selbar{flex:1 1 100%;display:flex;align-items:center;gap:8px;min-width:0}
+#selbar:not([hidden])~#q,body.selm header>#hb,body.selm header>#q{display:none}
+#selbar b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#selbar .sp{flex:1}
+#selbar .acc{background:var(--acc);color:#fff;font-weight:600}
