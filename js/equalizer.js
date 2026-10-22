@@ -87,8 +87,22 @@ Object.entries(AE.MD).forEach(([k,m])=>{const c=document.createElement('button')
 const SL=[['w','Amplitud',0,2.5,.05],['r','Sala',0,1,.02],['v','Giro',.02,.5,.01],['d','Distancia',1,8,.1]];
 SL.forEach(([k,n,mn,mx,st])=>{const l=document.createElement('label');l.innerHTML=`<span>${n}</span><input type="range" min="${mn}" max="${mx}" step="${st}">`;l.dataset.k=k;
   l.querySelector('input').oninput=e=>{const v=+e.target.value;k=='v'?AE.setV(v):S.sp[k]=v;S.sp.on=true;upd()};$('sps').appendChild(l)});
-const volUI=()=>{const p=Math.round(S.vol*100);$('vol').value=p;$('volv').textContent=p+'%';document.querySelectorAll('.vsm').forEach(s=>{s.value=p;s.title='Volumen: '+p+'%'})};
-[$('vol'),...document.querySelectorAll('.vsm')].forEach(s=>s.oninput=e=>{AE.setVol(+e.target.value/100);volUI()});volUI();
+/* altavoz junto al corazón (solo escritorio): ondas según el nivel, píldora con gota, rueda, teclado y silenciar al tocar */
+document.querySelector('#now .b-fav').insertAdjacentHTML('beforebegin',`<div class="vw" data-l="3"><button class="vb" aria-label="Silenciar / activar sonido"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path class="w w1" d="M15.2 9.6a3.6 3.6 0 0 1 0 4.8"/><path class="w w2" d="M17.7 7.3a7 7 0 0 1 0 9.4"/><path class="w w3" d="M20.2 5a10.2 10.2 0 0 1 0 14"/><path class="x" d="m15.5 9.5 5 5m0-5-5 5"/></svg></button><div class="vp"><div class="vt" role="slider" tabindex="0" aria-label="Volumen" aria-valuemin="0" aria-valuemax="100"><i class="vf"></i><b class="vk"></b><span class="vn"></span></div></div></div>`);
+const vw=document.querySelector('.vw'),vt=vw.querySelector('.vt');let vLast=.6;
+const setV=v=>{AE.setVol(Math.round(Math.min(1,Math.max(0,v))*100)/100);volUI()};
+const volUI=()=>{const p=Math.round(S.vol*100);$('vol').value=p;$('volv').textContent=p+'%';
+  vw.style.setProperty('--v',p+'%');vw.dataset.l=p==0?0:p<34?1:p<67?2:3;vt.setAttribute('aria-valuenow',p);vw.querySelector('.vn').textContent=p;vw.querySelector('.vb').title='Volumen: '+p+'%'};
+const fromX=e=>{const r=vt.getBoundingClientRect();setV((e.clientX-r.left)/r.width)};
+vt.onpointerdown=e=>{vt.setPointerCapture(e.pointerId);vw.classList.add('dr');fromX(e)};
+vt.onpointermove=e=>{if(vt.hasPointerCapture(e.pointerId))fromX(e)};
+vt.onpointerup=vt.onpointercancel=()=>vw.classList.remove('dr');
+vt.onkeydown=e=>{const d={ArrowRight:.05,ArrowUp:.05,ArrowLeft:-.05,ArrowDown:-.05}[e.key];if(d){setV(S.vol+d);e.preventDefault()}};
+vw.addEventListener('wheel',e=>{e.preventDefault();setV(S.vol-Math.sign(e.deltaY)*.05)},{passive:false});
+vw.querySelector('.vb').onclick=()=>{if(S.vol>0){vLast=S.vol;setV(0)}else setV(vLast||.6)};
+au.addEventListener('play',()=>vw.classList.add('pl'));['pause','ended'].forEach(ev=>au.addEventListener(ev,()=>vw.classList.remove('pl')));
+if(!au.paused)vw.classList.add('pl');
+$('vol').oninput=e=>setV(+e.target.value/100);volUI();
 $('eqon').onclick=()=>{S.on=!S.on;upd()};$('spon').onclick=()=>{S.sp.on=!S.sp.on;upd()};
 function ui(){
   volUI();
