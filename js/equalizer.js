@@ -87,8 +87,8 @@ Object.entries(AE.MD).forEach(([k,m])=>{const c=document.createElement('button')
 const SL=[['w','Amplitud',0,2.5,.05],['r','Sala',0,1,.02],['v','Giro',.02,.5,.01],['d','Distancia',1,8,.1]];
 SL.forEach(([k,n,mn,mx,st])=>{const l=document.createElement('label');l.innerHTML=`<span>${n}</span><input type="range" min="${mn}" max="${mx}" step="${st}">`;l.dataset.k=k;
   l.querySelector('input').oninput=e=>{const v=+e.target.value;k=='v'?AE.setV(v):S.sp[k]=v;S.sp.on=true;upd()};$('sps').appendChild(l)});
-const volUI=()=>{$('vol').value=Math.round(S.vol*100);$('volv').textContent=Math.round(S.vol*100)+'%'};
-$('vol').oninput=e=>{AE.setVol(+e.target.value/100);volUI()};
+const volUI=()=>{const p=Math.round(S.vol*100);$('vol').value=p;$('volv').textContent=p+'%';document.querySelectorAll('.vsm').forEach(s=>{s.value=p;s.title='Volumen: '+p+'%'})};
+[$('vol'),...document.querySelectorAll('.vsm')].forEach(s=>s.oninput=e=>{AE.setVol(+e.target.value/100);volUI()});volUI();
 $('eqon').onclick=()=>{S.on=!S.on;upd()};$('spon').onclick=()=>{S.sp.on=!S.sp.on;upd()};
 function ui(){
   volUI();

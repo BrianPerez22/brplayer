@@ -31,3 +31,11 @@
 @keyframes slL{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
 @keyframes slR{from{transform:translateX(-36px);opacity:0}to{transform:none;opacity:1}}
 
+
+/* mini control de volumen: solo en escritorio (ratón), en la barra inferior */
+.vsm{display:none}
+@media (hover:hover) and (pointer:fine){
+  #bar .tm{position:relative}
+  #bar .vsm{display:block;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:110px;height:16px;margin:0;accent-color:var(--acc);cursor:pointer}
+  #bar.min .vsm{display:none}
+}

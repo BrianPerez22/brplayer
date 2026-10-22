@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 const au=$('au');
 let loading=true,errN=0,tracks=[],cur=-1,shuffle=false,repeat=0,url=null,hist=[],shufQ=null,dragging=false,restore=null,sortKey=localStorage.getItem('sort')||'name-asc';
 /* Modo sin conexión: con él activado y sin internet, solo suenan las canciones locales (importadas) */
-let offMode=localStorage.getItem('offm')=='1',onlyOff=localStorage.getItem('onlyoff')=='1';
+let offMode=localStorage.getItem('offm')!='0',onlyOff=localStorage.getItem('onlyoff')=='1';
 const isOff=()=>offMode&&navigator.onLine===false;
 const okT=t=>!!t&&(!t.remote||!isOff());
 const MIME={mp3:'audio/mpeg',flac:'audio/flac',m4a:'audio/mp4',aac:'audio/aac',wav:'audio/wav',ogg:'audio/ogg',opus:'audio/ogg; codecs=opus',aif:'audio/aiff',aiff:'audio/aiff',caf:'audio/x-caf'};

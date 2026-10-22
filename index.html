@@ -22,7 +22,7 @@
   <nav id="tabs"><button data-v="pls" data-ic="heart" data-s="20" aria-label="Favoritos"></button><button data-v="lib">Biblioteca</button><button data-v="recent">Recientes</button><button data-v="queue">Cola <span id="qn"></span></button><button id="sortb" data-a="sort" data-ic="sort" aria-label="Ordenar"></button></nav>
 </header>
 <div id="menu" hidden></div>
-<div id="hm" hidden><button data-a="add" data-ic="plus" data-s="20">Añadir canciones</button><button data-a="sel" data-ic="check" data-s="20">Seleccionar canciones</button><button data-a="refl" data-ic="refresh" data-s="20">Actualizar biblioteca</button><button data-a="eq" data-ic="eq" data-s="20">Ecualizador</button><button data-a="offm" data-ic="dlf" data-s="20"><span id="offl">Modo sin conexión: desactivado</span></button><button data-a="spd" data-ic="speed" data-s="20"><span id="spdl">Velocidad: 1×</span></button><button data-a="slp" data-ic="clock" data-s="20"><span id="slpl">Temporizador de apagado</span></button><button data-a="dlcur" data-ic="dlf" data-s="20">Descargar canción actual</button><button data-a="clr" data-ic="trash" data-s="20">Borrar importadas</button></div>
+<div id="hm" hidden><button data-a="add" data-ic="plus" data-s="20">Añadir canciones</button><button data-a="sel" data-ic="check" data-s="20">Seleccionar canciones</button><button data-a="refl" data-ic="refresh" data-s="20">Actualizar biblioteca</button><button data-a="eq" data-ic="eq" data-s="20">Ecualizador</button><button data-a="offm" data-ic="dlf" data-s="20"><span id="offl">Modo sin conexión automático: sí</span></button><button data-a="spd" data-ic="speed" data-s="20"><span id="spdl">Velocidad: 1×</span></button><button data-a="slp" data-ic="clock" data-s="20"><span id="slpl">Temporizador de apagado</span></button><button data-a="dlcur" data-ic="dlf" data-s="20">Descargar canción actual</button><button data-a="clr" data-ic="trash" data-s="20">Borrar importadas</button></div>
 <input type="file" id="file" multiple accept="audio/*,.mp3,.flac,.m4a,.aac,.wav,.ogg,.opus,.aif,.aiff,.alac,.caf" hidden>
 <div id="list"></div>
 <div id="toast"></div>
@@ -35,7 +35,7 @@
     <button class="ib" data-a="info" data-ic="info" aria-label="Información"></button>
     <button class="ib" data-a="fs" data-ic="expand" aria-label="Pantalla completa"></button></div>
   <div class="skw"><canvas class="skc"></canvas><input type="range" class="sk" min="0" max="1000" value="0" aria-label="Posición"></div>
-  <div class="tm"><span class="tc">0:00</span><span class="td">0:00</span></div>
+  <div class="tm"><span class="tc">0:00</span><span class="td">0:00</span><input type="range" class="vsm" min="0" max="100" step="1" aria-label="Volumen" title="Volumen"></div>
   <div class="ct">
     <button class="b-shuf" data-a="shuf" data-ic="shuf" data-s="24" aria-label="Aleatorio"></button>
     <button data-a="prev" data-ic="prev" data-s="26" aria-label="Anterior"></button>

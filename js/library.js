@@ -95,7 +95,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
 }
 
 /* ---------- Modo sin conexión: sin internet, solo suenan las canciones locales ---------- */
-function updOff(){const l=$('offl');if(l)l.textContent='Modo sin conexión: '+(offMode?(isOff()?'activo (sin internet)':'activado'):'desactivado')}
+function updOff(){const l=$('offl');if(l)l.textContent='Modo sin conexión automático: '+(offMode?(isOff()?'activo ahora':'sí'):'no')}
 function offApply(){
   updOff();render();
   if(!offMode||!isOff())return;
@@ -112,7 +112,7 @@ addEventListener('online',()=>{updOff();render();if(offMode){toast('Conexión re
 Object.assign(A,{
   offm:()=>{offMode=!offMode;try{localStorage.setItem('offm',offMode?'1':'0')}catch(e){}
     $('hm').hidden=true;
-    if(offMode&&isOff())offApply();else{updOff();render();toast(offMode?'Modo sin conexión activado: sin internet solo sonarán las canciones locales':'Modo sin conexión desactivado')}},
+    if(offMode&&isOff())offApply();else{updOff();render();toast(offMode?'Automático: sin internet solo sonarán las canciones locales; con internet vuelve todo':'Modo sin conexión automático desactivado')}},
   offf:()=>setOnlyOff(false)
 });
 {const hm=A.hm;A.hm=()=>{updOff();hm()}}
