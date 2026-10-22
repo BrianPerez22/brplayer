@@ -2,6 +2,7 @@
 #eq .card{max-width:520px;max-height:88vh}
 #eq .mh{display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px}
 #eq canvas{width:100%;display:block;background:var(--card);border-radius:12px}
+.vl{display:flex;align-items:center;gap:10px;margin:4px 0 10px;font-size:13px;color:var(--mut)}.vl input{flex:1;accent-color:var(--acc)}.vl small{width:40px;text-align:right}
 #eqc{height:90px}#spr{height:150px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:6px 0;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
 .chip{flex:none;padding:7px 12px;font-size:13px;border-radius:16px}.chip.on{background:var(--acc);color:#fff}

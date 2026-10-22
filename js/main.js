@@ -12,7 +12,7 @@ try{
 }catch(e){}
 
 /* ---------- Inicio ---------- */
-try{localStorage.removeItem('offline')}catch(e){} /* el modo manual "Sin conexión" ya no existe */
+try{localStorage.removeItem('offline')}catch(e){} /* clave antigua; el modo actual usa "offm" */
 setPP(false);sync();updTabs();syncFav();
 addEventListener('hashchange',()=>applyHash());
 (async()=>{
@@ -32,7 +32,9 @@ addEventListener('hashchange',()=>applyHash());
   if(await applyHash())return;
   if(tracks.length){
     const id=localStorage.getItem('last');let i=tracks.findIndex(t=>String(t.id)==id);
-    if(i<0)i=0;restore=+localStorage.getItem('pos')||0;
+    if(i<0)i=0;if(!okT(tracks[i]))i=tracks.findIndex(okT);
+    if(i<0){updateNow();return}
+    restore=+localStorage.getItem('pos')||0;
     await load(i,false,false);
   }else updateNow();
 })();

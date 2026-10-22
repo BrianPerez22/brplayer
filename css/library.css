@@ -42,3 +42,6 @@
 #selbar b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 #selbar .sp{flex:1}
 #selbar .acc{background:var(--acc);color:#fff;font-weight:600}
+
+/* modo sin conexión: canciones del servidor no disponibles */
+.t.na{opacity:.38}

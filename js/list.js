@@ -76,11 +76,16 @@ async function applySort(){
   }
   sortTracks();render();
 }
+function setOnlyOff(v){
+  onlyOff=!!v;try{localStorage.setItem('onlyoff',onlyOff?'1':'0')}catch(e){}
+  render();toast(onlyOff?'Mostrando solo canciones offline':'Mostrando todas las canciones');
+}
 function toggleMenu(){
   const m=$('menu');if(!m.hidden){m.hidden=true;return}
-  m.innerHTML=SO.map(([k,l])=>`<button data-s="${k}">${l}${k==sortKey?ic('check',18):''}</button>`).join('');m.hidden=false;
+  m.innerHTML=SO.map(([k,l])=>`<button data-s="${k}">${l}${k==sortKey?ic('check',18):''}</button>`).join('')+`<button data-f="off" style="border-top:1px solid #8883;border-radius:0 0 8px 8px;margin-top:4px">Solo canciones offline${onlyOff?ic('check',18):''}</button>`;m.hidden=false;
 }
 $('menu').onclick=async e=>{
+  if(e.target.closest('[data-f]')){setOnlyOff(!onlyOff);$('menu').hidden=true;return}
   const b=e.target.closest('[data-s]');if(!b)return;
   sortKey=b.dataset.s;localStorage.setItem('sort',sortKey);$('menu').hidden=true;
   await applySort();toast('Orden: '+SO.find(o=>o[0]==sortKey)[1]);
@@ -88,13 +93,13 @@ $('menu').onclick=async e=>{
 
 /* ---------- Lista ---------- */
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){io.unobserve(e.target);const t=tracks[+e.target.dataset.i];if(t)ensureThumb(t)}}),{rootMargin:'200px'});
-const rowH=({t,i,k,c,ap,fv})=>`<div class="t${i==cur?' on':''}${sel.has(t)?' sel':''}" data-i="${i}"${k!=null?` data-qi="${k}"`:''}><span class="ck">${ic('check',16)}</span><img class="cv th" src="${t.thumb||GIF}" alt=""><div class="i"><b>${esc(t.title)}</b><small>${subH(t)}</small></div>${c?`<span class="cnt">${c}×</span>`:''}${k!=null?`<button class="x" data-qr="${k}" aria-label="Quitar de la cola">${ic('close',18)}</button><span class="gp" data-gp="${k}" aria-label="Arrastrar para reordenar">${ic('grip',20)}</span>`:''}${ap?`<button class="ib" data-ap="${i}" aria-label="Agregar a la playlist">${ic('plus',20)}</button>`:''}${fv?`<button class="ib on" data-fv="${i}" aria-label="Quitar de favoritas">${ic('heartf',20)}</button>`:''}<button class="ib" data-m="${i}" aria-label="Más opciones">${ic('more',20)}</button></div>`;
+const rowH=({t,i,k,c,ap,fv})=>`<div class="t${i==cur?' on':''}${sel.has(t)?' sel':''}${t.remote&&isOff()?' na':''}" data-i="${i}"${k!=null?` data-qi="${k}"`:''}><span class="ck">${ic('check',16)}</span><img class="cv th" src="${t.thumb||GIF}" alt=""><div class="i"><b>${esc(t.title)}</b><small>${subH(t)}</small></div>${c?`<span class="cnt">${c}×</span>`:''}${k!=null?`<button class="x" data-qr="${k}" aria-label="Quitar de la cola">${ic('close',18)}</button><span class="gp" data-gp="${k}" aria-label="Arrastrar para reordenar">${ic('grip',20)}</span>`:''}${ap?`<button class="ib" data-ap="${i}" aria-label="Agregar a la playlist">${ic('plus',20)}</button>`:''}${fv?`<button class="ib on" data-fv="${i}" aria-label="Quitar de favoritas">${ic('heartf',20)}</button>`:''}<button class="ib" data-m="${i}" aria-label="Más opciones">${ic('more',20)}</button></div>`;
 function listFor(){
   const q=qv();let a;
   if(view=='queue')a=queue.map((t,k)=>({t,i:tracks.indexOf(t),k}));
   else if(view.startsWith('pl:'))a=plTracks(view.slice(3)).map(t=>({t,i:tracks.indexOf(t)}));
   else a=tracks.map((t,i)=>({t,i}));
-  return a.filter(({t,i})=>i>=0&&mq(t,q));
+  return a.filter(({t,i})=>i>=0&&mq(t,q)&&(!onlyOff||!t.remote));
 }
 function updTabs(){
   document.querySelectorAll('#tabs [data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v==tabName(view)));
@@ -110,10 +115,11 @@ function render(){
   else if(view.startsWith('pl:')){const p=getPl(view.slice(3));if(!p){view='pls';render();return}
     head=`<div class="bar2"><button class="ib" data-a="plback" aria-label="Volver">${ic('back',22)}</button><b>${esc(p.name)}</b><span class="sp"></span><button data-a="plplay">${ic('play',16)}Reproducir</button><button data-a="plshare" aria-label="Compartir playlist">${ic('share',18)}</button></div>`;msg='Esta playlist está vacía.<br>Agrega canciones desde el botón de tres puntos.'}
   else if(!tracks.length)msg=loading?'Cargando biblioteca…':srvErr?'No se pudo cargar la biblioteca del servidor.<br><small>'+esc(srvErr)+'</small><br><br><button data-a="retry">Reintentar</button><br><br>También puedes tocar <b>☰ → Añadir canciones</b> para usar archivos del dispositivo.':'No hay canciones.<br>Toca <b>Añadir</b> para importar archivos.';
-  else msg='Sin resultados.';
+  else msg=onlyOff&&!tracks.some(t=>!t.remote)?'No hay canciones offline.<br>Toca <b>☰ → Añadir canciones</b> para guardar archivos en este dispositivo.':'Sin resultados.';
   const a=listFor();let recH='';
   if(view.startsWith('pl:')){const rs=getRecs(view.slice(3));if(rs.length)recH=`<div class="bar2"><b>Recomendaciones</b><span class="sp"></span><button class="ib" data-a="recr" aria-label="Otras recomendaciones">${ic('dice',20)}</button></div>`+rs.map(t=>rowH({t,i:tracks.indexOf(t),ap:1})).join('')}
-  if(view=='lib'&&tracks.length&&!$('q').value)head=`<div class="t" data-a="rand"><div class="plc">${ic('dice',22)}</div><div class="i"><b>Random</b><small>Canción aleatoria</small></div></div>`;
+  if(view=='lib'&&onlyOff)head=`<div class="bar2"><b>Solo canciones offline</b><span class="sp"></span><button data-a="offf">Ver todas</button></div>`;
+  if(view=='lib'&&tracks.length&&!$('q').value)head+=`<div class="t" data-a="rand"><div class="plc">${ic('dice',22)}</div><div class="i"><b>Random</b><small>Canción aleatoria</small></div></div>`;
   L.innerHTML=head+(a.length?a.map(rowH).join(''):`<div id="empty">${msg}</div>`)+recH;
   L.querySelectorAll('.t[data-i]').forEach(el=>io.observe(el));
 }

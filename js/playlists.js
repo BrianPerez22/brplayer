@@ -17,16 +17,17 @@ const base=()=>location.href.split('#')[0];
 const qchg=()=>{updTabs();if(view=='queue')render();preload()};
 function peek(){
   while(queue.length&&!tracks.includes(queue[0]))queue.shift();
-  if(queue.length)return queue[0];
-  if(plCtx&&!repeat){const r=plRandom();if(r)return r}
-  if(plCtx&&repeat==1){const a=plTracks(plCtx.id);if(a.length)return a[0]}
+  {const q=queue.find(okT);if(q)return q}
+  if(plCtx&&!repeat){const r=plRandom();if(r&&okT(r))return r}
+  if(plCtx&&repeat==1){const a=plTracks(plCtx.id).filter(okT);if(a.length)return a[0]}
   const n=tracks.length;if(!n)return null;
   if(shuffle&&n>1){
-    if(shufQ)shufQ=shufQ.filter(t=>tracks.includes(t)&&t!==tracks[cur]);
+    if(shufQ)shufQ=shufQ.filter(t=>tracks.includes(t)&&t!==tracks[cur]&&okT(t));
     if(!shufQ||!shufQ.length){if(shufQ&&!repeat)return null;mkQ()}
     return shufQ[0]||null;
   }
-  return cur+1<n?tracks[cur+1]:(repeat==1?tracks[0]:null);
+  for(let g=1;g<=n;g++){const k=cur+g;if(k>=n&&repeat!=1)return null;const t=tracks[k%n];if(okT(t)&&k%n!=cur)return t}
+  return null;
 }
 /* Precarga: la canción siguiente y la actual se guardan en caché (máx. 40) para que el salto y el cambio sean inmediatos */
 const CN='player-audio-v1',caching=new Set();

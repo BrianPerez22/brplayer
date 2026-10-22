@@ -2,7 +2,8 @@
 let loadTok=0;
 async function load(i,play,push=true){
   if(i<0||i>=tracks.length)return;
-  const t=tracks[i],tok=++loadTok;seekUntil=0;clearTimeout(seekTm);restoreR=null;
+  const t=tracks[i];if(!okT(t)){toast('Sin conexión: esa canción es del servidor');return}
+  const tok=++loadTok;seekUntil=0;clearTimeout(seekTm);restoreR=null;
   if(push&&cur>=0&&cur!=i){hist.push(tracks[cur]);if(hist.length>200)hist.shift()}
   if(shufQ)shufQ=shufQ.filter(x=>x!==t);
   cur=i;
@@ -33,30 +34,30 @@ async function updateNow(){
   }
 }
 /* Aleatorio: ronda sin repeticiones; Repetir: 0 no, 1 lista, 2 canción */
-function mkQ(){const a=tracks.filter(t=>t!==tracks[cur]);for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}shufQ=a}
+function mkQ(){const a=tracks.filter(t=>t!==tracks[cur]&&okT(t));for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}shufQ=a}
 function pick(auto){
   const n=tracks.length;if(!n)return -1;
-  while(queue.length){const q=queue.shift(),k=tracks.indexOf(q);if(k>=0){qchg();return k}}
-  if(plCtx&&!repeat){const r=plRandom();if(r){rndNext=null;if(!plCtx.done){plCtx.done=true;toast('Lista terminada: sigue música aleatoria')}return tracks.indexOf(r)}}
-  if(plCtx&&repeat==1){const a=plTracks(plCtx.id);if(a.length){queue=a.slice(1);qchg();return tracks.indexOf(a[0])}}
+  {const qi=queue.findIndex(q=>okT(q)&&tracks.includes(q));if(qi>=0){const q=queue.splice(qi,1)[0];qchg();return tracks.indexOf(q)}}
+  if(plCtx&&!repeat){const r=plRandom();if(r&&okT(r)){rndNext=null;if(!plCtx.done){plCtx.done=true;toast('Lista terminada: sigue música aleatoria')}return tracks.indexOf(r)}}
+  if(plCtx&&repeat==1){const a=plTracks(plCtx.id).filter(okT);if(a.length){queue=a.slice(1);qchg();return tracks.indexOf(a[0])}}
   if(shuffle&&n>1){
-    if(shufQ)shufQ=shufQ.filter(t=>tracks.includes(t)&&t!==tracks[cur]);
+    if(shufQ)shufQ=shufQ.filter(t=>tracks.includes(t)&&t!==tracks[cur]&&okT(t));
     if(!shufQ||!shufQ.length){if(shufQ&&auto&&!repeat)return -1;mkQ()}
     return tracks.indexOf(shufQ.shift());
   }
   let i=cur+1;
-  if(i>=n){if(repeat==1||!auto)i=0;else return -1}
-  return i;
+  for(let g=0;g<n;g++,i++){if(i>=n){if(repeat==1||!auto)i=0;else return -1}if(okT(tracks[i]))return i}
+  return -1;
 }
 function next(auto){
   const i=pick(auto);
-  if(i<0){au.pause();if(!shuffle)load(0,false);return}
+  if(i<0){au.pause();const f=tracks.findIndex(okT);if(!shuffle&&f>=0)load(f,false);return}
   load(i,true);
 }
 function prev(){
   if(au.currentTime>3){au.currentTime=0;return}
-  while(hist.length){const t=hist.pop(),i=tracks.indexOf(t);if(i>=0){load(i,true,false);return}}
-  load(cur>0?cur-1:tracks.length-1,true,false);
+  while(hist.length){const t=hist.pop(),i=tracks.indexOf(t);if(i>=0&&okT(t)){load(i,true,false);return}}
+  for(let g=1,n=tracks.length;g<=n;g++){const i=((cur-g)%n+n)%n;if(okT(tracks[i])){load(i,true,false);return}}
 }
 function toggle(){
   if(cur<0&&tracks.length){load(0,true);return}
@@ -64,8 +65,9 @@ function toggle(){
 }
 function rand(){
   if(!tracks.length)return;plCtx=null;rndNext=null;
-  let n=0;if(tracks.length>1)do{n=Math.random()*tracks.length|0}while(n==cur);
-  load(n,true);
+  const c=tracks.map((t,i)=>i).filter(i=>okT(tracks[i])&&i!=cur);
+  if(!c.length){toast('No hay canciones disponibles sin conexión');return}
+  load(c[Math.random()*c.length|0],true);
 }
 function moveBall(){const o=$('orb'),b=$('ball');b.style.left=(6+Math.random()*Math.max(0,o.clientWidth-b.offsetWidth-12))+'px'}
 async function showInfo(){

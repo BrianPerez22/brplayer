@@ -93,3 +93,27 @@ Object.assign(A,{refl:()=>refreshLib(false),retry:()=>refreshLib(false)});
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
   addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
 }
+
+/* ---------- Modo sin conexión: sin internet, solo suenan las canciones locales ---------- */
+function updOff(){const l=$('offl');if(l)l.textContent='Modo sin conexión: '+(offMode?(isOff()?'activo (sin internet)':'activado'):'desactivado')}
+function offApply(){
+  updOff();render();
+  if(!offMode||!isOff())return;
+  const t=tracks[cur];
+  /* si suena una del servidor en streaming (no guardada en el dispositivo), se pasa a una local */
+  if(t&&t.remote&&!url){
+    const was=!au.paused;au.pause();const i=pick(false);
+    if(i>=0){load(i,was);toast('Sin conexión: se reproducen solo canciones locales')}
+    else toast('Sin conexión: no hay canciones locales para reproducir');
+  }else toast('Sin conexión: solo canciones locales');
+}
+addEventListener('offline',()=>{offApply()});
+addEventListener('online',()=>{updOff();render();if(offMode){toast('Conexión restablecida');refreshLib(true)}});
+Object.assign(A,{
+  offm:()=>{offMode=!offMode;try{localStorage.setItem('offm',offMode?'1':'0')}catch(e){}
+    $('hm').hidden=true;
+    if(offMode&&isOff())offApply();else{updOff();render();toast(offMode?'Modo sin conexión activado: sin internet solo sonarán las canciones locales':'Modo sin conexión desactivado')}},
+  offf:()=>setOnlyOff(false)
+});
+{const hm=A.hm;A.hm=()=>{updOff();hm()}}
+updOff();

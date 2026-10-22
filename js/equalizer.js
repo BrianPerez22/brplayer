@@ -3,9 +3,9 @@ const AE=(()=>{
 const F0=[32,64,125,250,500,1000,2000,4000,8000,16000],LB=['32','64','125','250','500','1k','2k','4k','8k','16k'];
 const PR={Plano:[0,0,0,0,0,0,0,0,0,0],'Graves+':[6,5,4,2,0,0,0,0,0,0],'Agudos+':[0,0,0,0,0,1,3,5,6,6],Vocal:[-2,-2,-1,1,3,4,3,1,0,-1],Rock:[5,4,2,-1,-2,-1,2,4,5,5],Pop:[-1,1,3,4,3,0,-1,-1,1,2],Electrónica:[6,5,2,0,-2,2,1,3,5,5],Clásica:[0,0,0,0,0,0,-2,-2,-2,-4],Jazz:[3,2,1,2,-2,-2,0,1,2,3]};
 const MD={env:{n:'Envolvente',w:1.7,r:.2},sala:{n:'Sala',w:1.3,r:.5},o8:{n:'8D giratorio',w:1,r:.15}};
-const def={on:false,g:F0.map(()=>0),pre:'Plano',sp:{on:false,m:'env',w:1.7,r:.2,v:.12,d:3}};
+const def={vol:1,on:false,g:F0.map(()=>0),pre:'Plano',sp:{on:false,m:'env',w:1.7,r:.2,v:.12,d:3}};
 let S;try{S=Object.assign({},def,JSON.parse(localStorage.getItem('eq')||'{}'))}catch(e){S=def}
-S.sp=Object.assign({},def.sp,S.sp);
+S.sp=Object.assign({},def.sp,S.sp);S.vol=Math.min(1,Math.max(0,+S.vol));if(!isFinite(S.vol))S.vol=1;
 const save=()=>{try{localStorage.setItem('eq',JSON.stringify(S))}catch(e){}};
 let ac=null,an=null,N={},fl=[],oc=null,ofl=[],th0=0,t0=0,tm=0;
 const th=t=>th0+6.2832*S.sp.v*(t-t0);
@@ -32,7 +32,7 @@ function init(){
     const dl=c.createDelay(.1);dl.delayTime.value=.02;const cv=c.createConvolver();ac=c;cv.buffer=ir();n.W=g();sin.connect(dl);dl.connect(cv);cv.connect(n.W);
     const lm=c.createDynamicsCompressor();lm.threshold.value=-4;lm.knee.value=6;lm.ratio.value=12;lm.attack.value=.003;lm.release.value=.25;
     const a=c.createAnalyser();a.fftSize=2048;a.smoothingTimeConstant=.78;a.minDecibels=-88;a.maxDecibels=-18;
-    [n.A,n.B,n.W].forEach(x=>x.connect(lm));lm.connect(a);a.connect(c.destination);
+    [n.A,n.B,n.W].forEach(x=>x.connect(lm));lm.connect(a);n.V=g();a.connect(n.V);n.V.connect(c.destination); /* volumen maestro: funciona sin EQ ni 3D (en iOS au.volume no hace nada) */
     c.createMediaElementSource(au).connect(st); /* al final: si algo falla antes, el audio sigue normal */
     N=n;fl=f;an=a;t0=c.currentTime;
     c.onstatechange=()=>{if(c.state!='running'&&!au.paused)c.resume().catch(()=>{})};
@@ -49,6 +49,7 @@ function orbit(on){
 }
 function apply(){
   if(!an)return;const T=ac.currentTime,s=S.sp,set=(p,v)=>p.setTargetAtTime(v,T,.05);
+  set(N.V.gain,S.vol*S.vol);
   fl.forEach((b,i)=>set(b.gain,S.on?S.g[i]:0));
   set(N.pre.gain,Math.pow(10,-(S.on?Math.max(0,...S.g):0)*.5/20));
   const o8=s.on&&s.m=='o8',w=s.on?s.w:1;
@@ -64,15 +65,16 @@ function curve(){
   return o.map(v=>20*Math.log10(v));
 }
 /* restaurar ajustes guardados al reproducir (hace falta un gesto del usuario, que es el propio play) */
-au.addEventListener('play',()=>{if(S.on||S.sp.on)init()});
-return{init,apply,save,curve,th,S,PR,MD,F0,LB,get ac(){return ac},get an(){return an},
+au.addEventListener('play',()=>{if(S.on||S.sp.on||S.vol<1){if(!init()&&S.vol<1){try{au.volume=S.vol}catch(e){}}}});
+function setVol(v){S.vol=Math.min(1,Math.max(0,v));save();if(an)apply();else if(!init()){try{au.volume=S.vol}catch(e){}}}
+return{init,apply,save,setVol,curve,th,S,PR,MD,F0,LB,get ac(){return ac},get an(){return an},
   setV(v){const T=ac?ac.currentTime:0;th0=th(T);t0=T;S.sp.v=v}};
 })();
 
 /* ---------- Panel del ecualizador ---------- */
 {
 const S=AE.S,q=x=>document.querySelector(x);
-document.body.insertAdjacentHTML('beforeend',`<div id="eq" class="ovl" hidden><div class="card"><div class="mh"><b>Ecualizador</b><span style="display:flex;gap:8px;align-items:center"><button class="tg" id="eqon" aria-label="Activar ecualizador"></button><button class="ib" data-a="eqx" aria-label="Cerrar">${ic('close')}</button></span></div><canvas id="eqc"></canvas><div id="eqp" class="chips"></div><div id="eqb"></div><div class="mh"><b>Sonido 3D</b><button class="tg" id="spon" aria-label="Activar sonido 3D"></button></div><div id="spm" class="chips"></div><canvas id="spr"></canvas><div id="sps"></div></div></div>`);
+document.body.insertAdjacentHTML('beforeend',`<div id="eq" class="ovl" hidden><div class="card"><div class="mh"><b>Ecualizador</b><span style="display:flex;gap:8px;align-items:center"><button class="tg" id="eqon" aria-label="Activar ecualizador"></button><button class="ib" data-a="eqx" aria-label="Cerrar">${ic('close')}</button></span></div><label class="vl"><span>Volumen</span><input type="range" id="vol" min="0" max="100" step="1" aria-label="Volumen"><small id="volv"></small></label><canvas id="eqc"></canvas><div id="eqp" class="chips"></div><div id="eqb"></div><div class="mh"><b>Sonido 3D</b><button class="tg" id="spon" aria-label="Activar sonido 3D"></button></div><div id="spm" class="chips"></div><canvas id="spr"></canvas><div id="sps"></div></div></div>`);
 const bands=AE.F0.map((f,i)=>{
   const b=document.createElement('div');b.className='bd';b.innerHTML=`<small class="v">0</small><div class="tr"><div class="th"></div></div><small>${AE.LB[i]}</small>`;
   const mv=e=>{const r=b.querySelector('.tr').getBoundingClientRect();setB(i,Math.round((12-Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))*24)*2)/2)};
@@ -85,8 +87,11 @@ Object.entries(AE.MD).forEach(([k,m])=>{const c=document.createElement('button')
 const SL=[['w','Amplitud',0,2.5,.05],['r','Sala',0,1,.02],['v','Giro',.02,.5,.01],['d','Distancia',1,8,.1]];
 SL.forEach(([k,n,mn,mx,st])=>{const l=document.createElement('label');l.innerHTML=`<span>${n}</span><input type="range" min="${mn}" max="${mx}" step="${st}">`;l.dataset.k=k;
   l.querySelector('input').oninput=e=>{const v=+e.target.value;k=='v'?AE.setV(v):S.sp[k]=v;S.sp.on=true;upd()};$('sps').appendChild(l)});
+const volUI=()=>{$('vol').value=Math.round(S.vol*100);$('volv').textContent=Math.round(S.vol*100)+'%'};
+$('vol').oninput=e=>{AE.setVol(+e.target.value/100);volUI()};
 $('eqon').onclick=()=>{S.on=!S.on;upd()};$('spon').onclick=()=>{S.sp.on=!S.sp.on;upd()};
 function ui(){
+  volUI();
   $('eqon').classList.toggle('on',S.on);$('spon').classList.toggle('on',S.sp.on);
   bands.forEach((b,i)=>{b.querySelector('.th').style.top=(12-S.g[i])/24*100+'%';b.querySelector('.v').textContent=(S.g[i]>0?'+':'')+S.g[i]});
   document.querySelectorAll('#eqp .chip').forEach(c=>c.classList.toggle('on',c.dataset.k==S.pre));
