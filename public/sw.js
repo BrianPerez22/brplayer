@@ -1,0 +1,31 @@
+/* brplayer · service worker: guarda la app (HTML, CSS, JS) para abrirla sin conexión.
+   No toca el audio ni /api/: el audio y la lista siguen su propia lógica (precarga de audio en la caché 'player-audio-v1' y lista guardada).
+   Con los archivos con hash de Vite no hay lista fija: lo que se pide una vez con red queda guardado. */
+const V = 'brplayer-shell-v3';
+const SHELL = ['./', 'index.html', 'assets/abrir-brplayer.svg'];
+const AUDIO = /\.(mp3|flac|m4a|aac|wav|ogg|opus|aif|aiff|alac|caf)$/i;
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(V).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys()
+      .then((ks) => Promise.all(ks.filter((k) => k.startsWith('brplayer-shell-') && k !== V).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
+  );
+});
+/* red primero (siempre la versión más nueva); si no hay red, la copia guardada */
+self.addEventListener('fetch', (e) => {
+  const r = e.request, u = new URL(r.url);
+  if (r.method !== 'GET' || u.origin !== location.origin || r.headers.has('range') || u.pathname.includes('/api/') || AUDIO.test(u.pathname)) return;
+  e.respondWith(
+    fetch(r).then((res) => {
+      if (res.ok && res.type === 'basic') { const cp = res.clone(); caches.open(V).then((c) => c.put(r, cp)).catch(() => {}); }
+      return res;
+    }).catch(async () => {
+      const c = await caches.open(V);
+      return (await c.match(r, { ignoreSearch: true })) || (r.mode === 'navigate' ? (await c.match('./')) || (await c.match('index.html')) : null) || Response.error();
+    }),
+  );
+});
