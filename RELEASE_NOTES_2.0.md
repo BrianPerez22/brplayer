@@ -6,6 +6,7 @@ La app completa, reconstruida desde cero sobre un stack moderno. **Mismas funcio
 - **React 18 + TypeScript (strict)**: de 16 scripts sueltos a módulos tipados y componentes.
 - **Tailwind CSS** para la interfaz; el CSS propio queda solo para lo que Tailwind no expresa bien (variables de tema, sliders nativos, keyframes y efectos de inactividad).
 - **Zustand** como estado global: el estado visible vive en el store y el audio, el servidor y los motores gráficos son módulos independientes de React.
+- **Un solo archivo**: `npm run build:single` genera `brplayer.html`, autocontenido, que se abre con doble clic igual que la v1.
 - **Vite**: servidor de desarrollo con recarga en caliente y compilación de producción con rutas relativas (funciona en cualquier subcarpeta).
 - **GitHub Actions**: despliegue automático a GitHub Pages en cada push a `main`.
 - **Configurable**: `VITE_API_URL` cambia la dirección de la lista de canciones; `BRPLAYER_SERVER` apunta `/api` a tu servidor en desarrollo.

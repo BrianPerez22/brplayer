@@ -4,7 +4,7 @@ Un reproductor de música **de código abierto**, hecho para **Safari**, que se 
 
 Escucha música que tengas **descargada en tu celular** o conéctalo a **tu propio servidor** con tu carpeta de música.
 
-> **Versión 2.0** · reescrita por completo en **React + TypeScript + Tailwind CSS**, con **Vite** y **Zustand**. Misma app, mismas funciones, mismos datos guardados; ahora con tipos, componentes y un proyecto que se puede mantener.
+> **Versión 2.0** · sin backend: sigue siendo una app estática que puede entregarse como un solo `.html`. Reescrita por completo en **React + TypeScript + Tailwind CSS**, con **Vite** y **Zustand**. Misma app, mismas funciones, mismos datos guardados; ahora con tipos, componentes y un proyecto que se puede mantener.
 
 <p align="center">
   <a href="https://brianperez22.github.io/brplayer/">
@@ -21,8 +21,18 @@ Escucha música que tengas **descargada en tu celular** o conéctalo a **tu prop
 ### Usarla
 Abre la dirección de arriba en Safari, toca **☰ → Añadir canciones** y elige tus archivos de audio. Para tenerla como una app, en iPhone/iPad usa **Compartir → Añadir a pantalla de inicio**: se abre a pantalla completa, con la barra de estado translúcida.
 
+### Un solo archivo, como la v1
+Si solo quieres abrirla y escuchar, no necesitas servidor: genera **un único `brplayer.html`** con todo dentro y ábrelo con doble clic en Safari.
+
+```bash
+npm install
+npm run build:single   # genera dist-single/brplayer.html
+```
+
+(Con `file://` el service worker no se activa, igual que en la v1: la app funciona, solo que no se guarda para abrirse sin conexión. Para eso, aloja el archivo con HTTPS.)
+
 ### Alojarla tú mismo
-La 2.0 se compila a archivos estáticos (HTML, CSS y JS). Necesitas [Node.js](https://nodejs.org) 18 o superior:
+La 2.0 también se compila a archivos estáticos (HTML, CSS y JS). Necesitas [Node.js](https://nodejs.org) 18 o superior:
 
 ```bash
 npm install
