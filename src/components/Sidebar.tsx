@@ -27,7 +27,7 @@ export function Sidebar() {
   return (
     <aside id="side">
       <div className="brand">
-        <i className="logo"><Icon name="note" size={20} /></i>
+        <Orb hold className="brand-orb" />
         <div><b>brplayer</b><small>Tu música, tu servidor</small></div>
       </div>
 
@@ -52,10 +52,7 @@ export function Sidebar() {
       </div>
 
       <div className="sfoot">
-        <div className="orbc">
-          <Orb hold />
-          <p>Toca la bolita para cambiar el color. Mantenla pulsada para el modo RGB.</p>
-        </div>
+        <Orb hold className="side-orb" />
         <div className="stat">
           <span className={`dot ${off ? 'off' : ''}`} />
           <span className="min-w-0 flex-1 truncate">{scanning ? 'Leyendo etiquetas…' : off ? 'Sin conexión' : 'En línea'} · {nCan(nTracks)}</span>

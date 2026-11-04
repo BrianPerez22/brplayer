@@ -1,8 +1,8 @@
-export const SORT_OPTIONS: ReadonlyArray<readonly [string, string]> = [
-  ['name-asc', 'Nombre (A–Z)'], ['name-desc', 'Nombre (Z–A)'],
-  ['artist-asc', 'Artista (A–Z)'], ['artist-desc', 'Artista (Z–A)'],
-  ['album-asc', 'Álbum (A–Z)'], ['album-desc', 'Álbum (Z–A)'],
-  ['date-desc', 'Fecha (más reciente)'], ['date-asc', 'Fecha (más antigua)'],
+export const SORT_OPTIONS: ReadonlyArray<readonly [string, string, 'asc' | 'desc']> = [
+  ['name', 'Nombre', 'asc'],
+  ['artist', 'Artista', 'asc'],
+  ['album', 'Álbum', 'asc'],
+  ['date', 'Fecha', 'desc'],
 ];
 
 /** velocidades de reproducción (con el tono intacto) */

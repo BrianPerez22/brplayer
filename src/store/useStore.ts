@@ -30,6 +30,7 @@ export interface State {
 
   sortKey: string;
   onlyOff: boolean;
+  onlyFlac: boolean;
   offMode: boolean;
   online: boolean;
 
@@ -78,8 +79,9 @@ export const useStore = create<State>()(() => ({
   query: '',
   scanning: false,
 
-  sortKey: SORT_OPTIONS.some((o) => o[0] === sortKey0) ? (sortKey0 as string) : 'name-asc',
+  sortKey: SORT_OPTIONS.some(([field]) => sortKey0 === `${field}-asc` || sortKey0 === `${field}-desc`) ? (sortKey0 as string) : 'name-asc',
   onlyOff: ls.str('onlyoff') === '1',
+  onlyFlac: ls.str('onlyflac') === '1',
   offMode: ls.str('offm') !== '0',
   online: navigator.onLine !== false,
 
@@ -115,6 +117,7 @@ useStore.subscribe((s, p) => {
   if (s.stats !== p.stats) ls.set('stats', s.stats);
   if (s.sortKey !== p.sortKey) ls.setStr('sort', s.sortKey);
   if (s.onlyOff !== p.onlyOff) ls.setStr('onlyoff', s.onlyOff ? '1' : '0');
+  if (s.onlyFlac !== p.onlyFlac) ls.setStr('onlyflac', s.onlyFlac ? '1' : '0');
   if (s.offMode !== p.offMode) ls.setStr('offm', s.offMode ? '1' : '0');
   if (s.bmin !== p.bmin) ls.setStr('bmin', s.bmin ? '1' : '0');
   if (s.theme !== p.theme) ls.setStr('theme', s.theme);

@@ -4,7 +4,7 @@ import { au } from '../audio/element';
 import { progressFx } from './progressFx';
 
 /* tonos 600: el texto/ícono blanco encima se lee bien en todos (el acento por defecto cambia con el tema) */
-const PAL: Array<string | null> = [null, '#2563eb', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#db2777'];
+const PAL: Array<string | null> = [null, '#2563eb', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#db2777', '#BD0D54'];
 const RS = document.documentElement.style;
 
 /** tono actual del modo RGB (null si no está activo): lo usa el visualizador para teñirse igual */

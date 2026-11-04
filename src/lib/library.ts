@@ -54,6 +54,12 @@ export function setOnlyOff(v: boolean): void {
   toast(v ? 'Mostrando solo canciones offline' : 'Mostrando todas las canciones');
 }
 
+export function setOnlyFlac(v: boolean): void {
+  set({ onlyFlac: v, ...(v ? { sortKey: 'album-asc' } : {}) });
+  if (v) { scanTags(); sortTracks(); }
+  toast(v ? 'Mostrando FLAC por álbum y número de pista' : 'Mostrando todos los formatos');
+}
+
 /* ---------- Leer artista/álbum/pista de todas las canciones del servidor que aún no se conocen (una sola vez; queda guardado) ---------- */
 let scanDone = 0, scanTot = 0, scanTm = 0;
 function afterScan(): void {

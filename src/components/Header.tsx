@@ -4,7 +4,7 @@ import { isOff, tabName } from '../store/selectors';
 import { Icon, type IconName } from './Icon';
 import { Orb } from './Orb';
 import { SORT_OPTIONS, SPEEDS, TAB_ORDER } from '../lib/constants';
-import { chooseSort, clearImported, pickFiles, refreshLib, setOnlyOff, toggleOffMode } from '../lib/library';
+import { chooseSort, clearImported, pickFiles, refreshLib, setOnlyFlac, setOnlyOff, toggleOffMode } from '../lib/library';
 import { downloadTrack } from '../lib/download';
 import { enterSel, exitSel, goTab, selActions, selectAll } from '../lib/actions';
 import { nextTheme, themeLabel } from '../lib/theme';
@@ -54,17 +54,30 @@ export function HomeMenu() {
 function SortButton({ className = '' }: { className?: string }) {
   const sortKey = useStore((s) => s.sortKey);
   const onlyOff = useStore((s) => s.onlyOff);
+  const onlyFlac = useStore((s) => s.onlyFlac);
   const menuOpen = useStore((s) => s.menuOpen);
   return (
     <div className={`sortw relative ${className}`}>
       <button className="rb" aria-label="Ordenar" aria-expanded={menuOpen} onClick={() => set({ menuOpen: !menuOpen })}><Icon name="sort" size={20} /></button>
       {menuOpen && (
         <div id="menu" className="pop animate-pop">
-          {SORT_OPTIONS.map(([k, l]) => (
-            <button key={k} onClick={() => void chooseSort(k, l)}>{l}{k === sortKey && <Icon name="check" size={18} />}</button>
-          ))}
+          {SORT_OPTIONS.map(([field, label, initialDirection]) => {
+            const selected = sortKey.startsWith(`${field}-`);
+            const direction = selected ? sortKey.slice(field.length + 1) : initialDirection;
+            const nextDirection = selected ? (direction === 'asc' ? 'desc' : 'asc') : initialDirection;
+            const key = `${field}-${nextDirection}`;
+            const arrow = selected ? (direction === 'asc' ? '↑' : '↓') : '';
+            return (
+              <button key={field} onClick={() => void chooseSort(key, `${label} ${nextDirection === 'asc' ? '↑' : '↓'}`)}>
+                {label}{arrow && <span aria-hidden="true"> {arrow}</span>}
+              </button>
+            );
+          })}
           <button className="sep" onClick={() => { setOnlyOff(!onlyOff); set({ menuOpen: false }); }}>
             Solo canciones offline{onlyOff && <Icon name="check" size={18} />}
+          </button>
+          <button className="sep" onClick={() => { setOnlyFlac(!onlyFlac); set({ menuOpen: false }); }}>
+            Solo canciones FLAC (por álbum){onlyFlac && <Icon name="check" size={18} />}
           </button>
         </div>
       )}

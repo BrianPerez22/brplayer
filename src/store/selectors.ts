@@ -1,6 +1,6 @@
 import type { Playlist, Track, ViewId } from '../types';
 import { S, type State } from './useStore';
-import { key, matches, nk, trackNo } from '../lib/util';
+import { extOf, key, matches, nk, trackNo } from '../lib/util';
 
 export const isGrp = (v: ViewId): boolean => /^(ar|al):/.test(v);
 export const tabName = (view: ViewId, homeTab: string): string => (isGrp(view) ? homeTab : view.startsWith('pl') ? 'pls' : view);
@@ -47,7 +47,7 @@ export function listFor(s: State): Entry[] {
   if (s.view === 'queue') a = s.queue.map((t, k) => ({ t, i: s.tracks.indexOf(t), k }));
   else if (s.view.startsWith('pl:')) a = plTracks(s.view.slice(3), s).map((t) => ({ t, i: s.tracks.indexOf(t) }));
   else a = s.tracks.map((t, i) => ({ t, i }));
-  return a.filter(({ t, i }) => i >= 0 && matches(t, q) && (!s.onlyOff || !t.remote));
+  return a.filter(({ t, i }) => i >= 0 && matches(t, q) && (!s.onlyOff || !t.remote) && (!s.onlyFlac || extOf(t.name) === 'flac'));
 }
 
 /** contexto de reproducción según la vista: tocar una canción sigue la lista donde está */
