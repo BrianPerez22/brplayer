@@ -27,7 +27,24 @@ export const hay = (t: Track): string => {
   }
   return t._hs as string;
 };
-export const matches = (t: Track, q: string): boolean => !q || hay(t).includes(q);
+/** palabras de la búsqueda, normalizadas igual que el texto de las canciones (se recalcula solo si cambia la consulta) */
+let qLast = '';
+let qWords: string[] = [];
+const words = (q: string): string[] => {
+  if (q !== qLast) { qLast = q; qWords = nz(q).split(/\s+/).filter(Boolean); }
+  return qWords;
+};
+
+/**
+ * ¿La canción coincide con la búsqueda? Ignora mayúsculas y tildes en AMBOS lados (antes solo se normalizaba la canción,
+ * así que cualquier mayúscula o tilde escrita en el buscador daba 0 resultados) y exige todas las palabras, en cualquier orden.
+ */
+export const matches = (t: Track, q: string): boolean => {
+  const w = words(q);
+  if (!w.length) return true;
+  const h = hay(t);
+  return w.every((x) => h.includes(x));
+};
 
 export const key = (t: Track): string => String(t.id);
 export const nk = (x: unknown): string => String(x || '').trim().toLowerCase();

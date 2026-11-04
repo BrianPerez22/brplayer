@@ -178,7 +178,7 @@ export const IDLE = (() => {
       B.classList.add('fx-' + name);
       setM(0);
       ramp(1, (name === 'melt' ? 50000 : 40000) / sp);
-    } else if (name === 'rgb') rgbStart(2200 / sp, [document.querySelector('header'), document.getElementById('list')]);
+    } else if (name === 'rgb') rgbStart(2200 / sp, [document.querySelector('header'), document.getElementById('list'), document.getElementById('side')]);
     else PXL.start(sp).then((ok) => { if (!ok && on && cur === 'pixel') { cur = null; begin(pick(['melt', 'lsd', 'rgb'])); } });
   }
 

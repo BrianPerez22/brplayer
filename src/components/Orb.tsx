@@ -12,10 +12,10 @@ export function Orb({ onTap, hold = false, className = '' }: { onTap?: () => voi
   };
   return (
     <div
-      id={hold ? 'orb' : undefined}
       role="button"
-      aria-label={hold ? 'Indicador de reproducción' : 'Cambiar animación'}
-      className={`orb ${playing ? 'play' : ''} ${className}`}
+      aria-label={hold ? 'Bolita de color: toca para cambiar el color, mantén pulsada para el modo RGB' : 'Cambiar animación'}
+      title={hold ? 'Toca: cambia el color · Mantén: modo RGB' : undefined}
+      className={`orb ${hold ? 'hold' : ''} ${playing ? 'play' : ''} ${className}`}
       onClick={(e) => { nudge(e.currentTarget); if (onTap) onTap(); else tapBall(); }}
       onPointerDown={hold ? orbHold.down : undefined}
       onPointerUp={hold ? orbHold.up : undefined}

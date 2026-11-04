@@ -5,7 +5,7 @@ import { Controls } from './Controls';
 import { ProgressBar } from './ProgressBar';
 import { Orb } from './Orb';
 import { VolumeWidget } from './VolumeWidget';
-import { FavButton, InfoButton, NowTitle, ShareButton } from './NowInfo';
+import { FavButton, InfoButton, MoreButton, NowTitle, ShareButton } from './NowInfo';
 import { GIF } from '../lib/util';
 import { vz } from '../visualizer/vz';
 import { useVz } from '../hooks/useExternal';
@@ -33,16 +33,16 @@ export function FullScreen() {
 
   return (
     <div id="fs" ref={fs} hidden={!open} className={`${ui.imm ? 'imm' : ''} ${ui.hud ? 'hud' : ''}`}>
-      <div className="top flex w-full justify-between">
+      <div className="top">
         <button className="ib" onClick={close} aria-label="Cerrar"><Icon name="down" size={28} /></button>
-        <span className="flex items-center">
+        <span className="tools">
           <button className="ib" onClick={() => { AE.init(); set({ eqOpen: true }); }} aria-label="Ecualizador"><Icon name="eq" size={24} /></button>
           <button className="ib" onClick={vz.menu} aria-label="Visualizaciones"><Icon name="viz" size={24} /></button>
           <button className="ib" onClick={() => vz.imm()} aria-label="Visualización a pantalla completa"><Icon name="full" size={24} /></button>
           <VolumeWidget className="fsv" />
           <FavButton size={24} />
-          <ShareButton size={24} />
-          <InfoButton size={24} />
+          <span className="max-sm:hidden flex"><ShareButton size={24} /><InfoButton size={24} /></span>
+          <span className="sm:hidden flex"><MoreButton size={24} /></span>
         </span>
       </div>
 
@@ -68,10 +68,10 @@ export function FullScreen() {
         </div>
       </div>
 
-      <div className="meta w-full text-center">
+      <div className="meta">
         <NowTitle idPrefix="f" />
       </div>
-      <div className="bt w-full max-w-[420px]">
+      <div className="bt">
         <ProgressBar />
         <Controls big />
         <Orb onTap={cycleViz} className="!mt-1.5" />

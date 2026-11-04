@@ -6,8 +6,9 @@ import { GIF, key, matches, nCan, nk, shuffled } from '../lib/util';
 import { Icon } from './Icon';
 import { TrackRow, rowProps } from './TrackRow';
 import { Bar2, Carousel, Spacer } from './Carousel';
+import { Hero } from './Hero';
 import { ensureThumb, wantBig } from '../lib/thumbs';
-import { playFromQueue, playList, playPl, playSingle, rand, setQueue } from '../audio/player';
+import { playFromQueue, playList, playPl, playSingle, setQueue } from '../audio/player';
 import { addToPlaylist, groupBack, newPlaylist, playFavs, playGroup, playlistMenu, rowMenu, toggleFav } from '../lib/actions';
 import { sharePlaylist } from '../lib/links';
 import { refreshLib, setOnlyOff } from '../lib/library';
@@ -18,16 +19,22 @@ function useRow() {
   const cur = useStore((s) => s.cur);
   const sel = useStore((s) => s.sel);
   const tracks = useStore((s) => s.tracks);
+  const favs = useStore((s) => s.favs);
+  const stats = useStore((s) => s.stats);
   const off = useStore((s) => isOff(s));
   useStore((s) => s.rev); // repintar al cambiar etiquetas y carátulas
-  return (t: Track, extra: { k?: number; count?: number; add?: boolean; fav?: boolean } = {}) => {
-    const i = tracks.indexOf(t);
-    return <TrackRow key={`${extra.k ?? ''}:${key(t)}`} {...rowProps(t, { i, current: i === cur, selected: sel.has(t), unavailable: t.remote && off })} {...extra} />;
+  const favSet = useMemo(() => new Set(favs), [favs]);
+  return (t: Track, extra: { k?: number; count?: number; add?: boolean } = {}) => {
+    const i = tracks.indexOf(t), kk = key(t);
+    return <TrackRow key={`${extra.k ?? ''}:${kk}`} {...rowProps(t, { i, current: i === cur, selected: sel.has(t), unavailable: t.remote && off, faved: favSet.has(kk), plays: stats[kk]?.n })} {...extra} />;
   };
 }
 
+/** lista de filas dentro de una tarjeta redondeada */
+const Rows = ({ children }: { children: React.ReactNode }) => <div className="tl">{children}</div>;
+
 const Empty = ({ children }: { children: React.ReactNode }) => (
-  <div id="empty" className="px-5 py-[60px] text-center leading-normal text-mut">{children}</div>
+  <div id="empty"><i className="eic"><Icon name="note" size={26} /></i><div>{children}</div></div>
 );
 
 /** recomendaciones de una playlist: 5 canciones al azar que no están en ella; al agregar una se conservan las demás */
@@ -63,39 +70,40 @@ function PlainView({ s, row }: { s: State; row: ReturnType<typeof useRow> }) {
   else if (plId) msg = <>Esta playlist está vacía.<br />Agrega canciones desde el botón de tres puntos.</>;
   else if (!tracks.length) {
     msg = loading ? 'Cargando biblioteca…' : srvErr
-      ? <>No se pudo cargar la biblioteca del servidor.<br /><small>{srvErr}</small><br /><br /><button onClick={() => void refreshLib(false)}>Reintentar</button><br /><br />También puedes tocar <b>☰ → Añadir canciones</b> para usar archivos del dispositivo.</>
-      : <>No hay canciones.<br />Toca <b>Añadir</b> para importar archivos.</>;
+      ? <>No se pudo cargar la biblioteca del servidor.<br /><small>{srvErr}</small><br /><br /><button className="pill pri" onClick={() => void refreshLib(false)}>Reintentar</button><br /><br />También puedes usar el menú → <b>Añadir canciones</b> para usar archivos del dispositivo.</>
+      : <>No hay canciones.<br />Abre el menú y elige <b>Añadir canciones</b> para importar archivos.</>;
   } else msg = onlyOff && !tracks.some((t) => !t.remote)
-    ? <>No hay canciones offline.<br />Toca <b>☰ → Añadir canciones</b> para guardar archivos en este dispositivo.</>
+    ? <>No hay canciones offline.<br />Usa el menú → <b>Añadir canciones</b> para guardar archivos en este dispositivo.</>
     : 'Sin resultados.';
 
   return (
     <>
+      {view === 'lib' && !query && <Hero />}
+      {view === 'lib' && (
+        <Bar2>
+          <b>{query ? 'Resultados' : 'Biblioteca'}</b>{tracks.length > 0 && <span className="cnt">{query ? entries.length : tracks.length}</span>}
+          <Spacer />
+          {onlyOff && <button className="pill" onClick={() => setOnlyOff(false)}>Solo offline · Ver todas</button>}
+        </Bar2>
+      )}
       {view === 'queue' && (
-        <Bar2><b>Cola de reproducción</b><Spacer /><button onClick={() => setQueue([])}>Vaciar</button></Bar2>
+        <Bar2><b>Cola de reproducción</b>{s.queue.length > 0 && <span className="cnt">{s.queue.length}</span>}<Spacer />{s.queue.length > 0 && <button className="pill" onClick={() => setQueue([])}>Vaciar</button>}</Bar2>
       )}
       {pl && (
         <Bar2>
-          <button className="ib" onClick={() => set({ view: 'pls' })} aria-label="Volver"><Icon name="back" /></button>
-          <b>{pl.name}</b><Spacer />
-          <button onClick={() => playPl(pl.id)}><Icon name="play" size={16} />Reproducir</button>
-          <button onClick={() => void sharePlaylist(pl.id)} aria-label="Compartir playlist"><Icon name="share" size={18} /></button>
+          <button className="rb" onClick={() => set({ view: 'pls' })} aria-label="Volver"><Icon name="back" size={20} /></button>
+          <b>{pl.name}</b><span className="cnt">{pl.items.length}</span><Spacer />
+          <button className="pill pri" onClick={() => playPl(pl.id)}><Icon name="play" size={16} />Reproducir</button>
+          <button className="rb" onClick={() => void sharePlaylist(pl.id)} aria-label="Compartir playlist"><Icon name="share" size={19} /></button>
         </Bar2>
       )}
-      {view === 'lib' && onlyOff && <Bar2><b>Solo canciones offline</b><Spacer /><button onClick={() => setOnlyOff(false)}>Ver todas</button></Bar2>}
-      {view === 'lib' && tracks.length > 0 && !query && (
-        <div className="t flex items-center gap-3 border-b border-card px-1 py-3" data-rand="1" onClick={rand}>
-          <div className="plc"><Icon name="dice" /></div>
-          <div className="i min-w-0 flex-1"><b className="block">Random</b><small className="block text-mut">Canción aleatoria</small></div>
-        </div>
-      )}
-      {entries.length ? entries.map(({ t, k }) => row(t, { k })) : <Empty>{msg}</Empty>}
+      {entries.length ? <Rows>{entries.map(({ t, k }) => row(t, { k }))}</Rows> : <Empty>{msg}</Empty>}
       {pl && recs.length > 0 && (
         <>
           <Bar2><b>Recomendaciones</b><Spacer />
-            <button className="ib" onClick={() => set((st) => ({ recNonce: st.recNonce + 1 }))} aria-label="Otras recomendaciones"><Icon name="dice" size={20} /></button>
+            <button className="rb" onClick={() => set((st) => ({ recNonce: st.recNonce + 1 }))} aria-label="Otras recomendaciones"><Icon name="dice" size={20} /></button>
           </Bar2>
-          {recs.map((t) => row(t, { add: true }))}
+          <Rows>{recs.map((t) => row(t, { add: true }))}</Rows>
         </>
       )}
     </>
@@ -104,9 +112,9 @@ function PlainView({ s, row }: { s: State; row: ReturnType<typeof useRow> }) {
 
 /* ---------- Recientes y más escuchadas ---------- */
 function RecentView({ s, row }: { s: State; row: ReturnType<typeof useRow> }) {
-  const { tracks, stats, sel } = s;
+  const { tracks, stats, sel, query } = s;
   const m = new Map(tracks.map((t) => [key(t), t]));
-  const ent = Object.entries(stats).map(([k, st]) => ({ tr: m.get(k), n: st.n, ts: st.ts })).filter((e): e is { tr: Track; n: number; ts: number } => !!e.tr && e.n > 0);
+  const ent = Object.entries(stats).map(([k, st]) => ({ tr: m.get(k), n: st.n, ts: st.ts })).filter((e): e is { tr: Track; n: number; ts: number } => !!e.tr && e.n > 0 && matches(e.tr, query));
   const rec = [...ent].sort((a, b) => b.ts - a.ts).slice(0, 5);
   const top = [...ent].sort((a, b) => b.n - a.n || b.ts - a.ts).slice(0, 10);
   useEffect(() => { top.forEach((e) => { ensureThumb(e.tr); wantBig(e.tr); }); });
@@ -114,22 +122,22 @@ function RecentView({ s, row }: { s: State; row: ReturnType<typeof useRow> }) {
     return (
       <>
         <Bar2><b>Reproducidas recientemente</b></Bar2>
-        <Empty>Aún no has reproducido canciones.<br />Aquí verás las últimas y las más escuchadas.</Empty>
+        <Empty>{query ? 'Sin resultados.' : <>Aún no has reproducido canciones.<br />Aquí verás las últimas y las más escuchadas.</>}</Empty>
       </>
     );
   }
   return (
     <>
       <Bar2><b>Reproducidas recientemente</b><Spacer />
-        <button onClick={() => { if (confirm('¿Borrar el historial de reproducciones?')) set({ stats: {} }); }}>Limpiar</button>
+        <button className="pill" onClick={() => { if (confirm('¿Borrar el historial de reproducciones?')) set({ stats: {} }); }}>Limpiar</button>
       </Bar2>
-      {rec.map((e) => row(e.tr, { count: e.n }))}
+      <Rows>{rec.map((e) => row(e.tr, { count: e.n }))}</Rows>
       <Bar2><b>Más escuchadas</b></Bar2>
       <Carousel>
         {top.map((e, r) => (
           <div key={key(e.tr)} className={`ci ${sel.has(e.tr) ? 'sel' : ''}`} data-i={tracks.indexOf(e.tr)}>
-            <img className="cv" src={e.tr.thumbL || e.tr.thumb || GIF} alt="" />
-            <b>{e.tr.title}</b><small>#{r + 1} · {e.n}×</small>
+            <div className="cw"><img className="cv" src={e.tr.thumbL || e.tr.thumb || GIF} alt="" /><span className="rk">{r + 1}</span></div>
+            <b>{e.tr.title}</b><small>{e.n}× reproducida{e.n === 1 ? '' : 's'}</small>
           </div>
         ))}
       </Carousel>
@@ -145,34 +153,36 @@ function FavView({ s, row }: { s: State; row: ReturnType<typeof useRow> }) {
   useEffect(() => { covers.forEach((f) => { if (f) { ensureThumb(f); wantBig(f); } }); });
   return (
     <>
-      <Bar2><b>Playlists</b></Bar2>
+      <Bar2><b>Playlists</b>{pls.length > 0 && <span className="cnt">{pls.length}</span>}</Bar2>
       <Carousel>
         {pls.map((p, n) => {
           const f = covers[n];
           return (
             <div key={p.id} className="ci" onClick={() => set({ view: 'pl:' + p.id, recFor: '' })}>
-              <img className="cv" src={f ? f.thumbL || f.thumb || GIF : GIF} alt="" />
-              <button className="pm" onClick={(e) => { e.stopPropagation(); playlistMenu(p.id); }} aria-label="Opciones"><Icon name="more" size={18} /></button>
+              <div className="cw">
+                <img className="cv" src={f ? f.thumbL || f.thumb || GIF : GIF} alt="" />
+                <button className="pm" onClick={(e) => { e.stopPropagation(); playlistMenu(p.id); }} aria-label="Opciones"><Icon name="more" size={18} /></button>
+              </div>
               <b>{p.name}</b><small>{nCan(p.items.length)}</small>
             </div>
           );
         })}
         <div className="ci" onClick={() => newPlaylist()}>
-          <div className="nw"><Icon name="plus" size={30} /></div><b>Nueva</b><small>Crear playlist</small>
+          <div className="cw nw"><Icon name="plus" size={30} /></div><b>Nueva</b><small>Crear playlist</small>
         </div>
       </Carousel>
       <Bar2>
         <b>Mis favoritas</b>{favs.length > 0 && <span className="cnt">{favs.length}</span>}<Spacer />
         {fa.length > 0 && (
           <>
-            <button onClick={() => playFavs(false)}><Icon name="play" size={16} />Reproducir</button>
-            <button className="ib" onClick={() => playFavs(true)} aria-label="Aleatorio"><Icon name="shuf" size={20} /></button>
+            <button className="pill pri" onClick={() => playFavs(false)}><Icon name="play" size={16} />Reproducir</button>
+            <button className="rb" onClick={() => playFavs(true)} aria-label="Aleatorio"><Icon name="shuf" size={20} /></button>
           </>
         )}
       </Bar2>
       {fa.length
-        ? fa.map((t) => row(t, { fav: true }))
-        : <Empty>{query ? 'Sin resultados.' : <>Aún no tienes canciones favoritas.<br />Toca el corazón del reproductor o usa los tres puntos de una canción.</>}</Empty>}
+        ? <Rows>{fa.map((t) => row(t))}</Rows>
+        : <Empty>{query ? 'Sin resultados.' : <>Aún no tienes canciones favoritas.<br />Toca el corazón del reproductor o de una canción.</>}</Empty>}
     </>
   );
 }
@@ -204,7 +214,7 @@ function GroupView({ s, row }: { s: State; row: ReturnType<typeof useRow> }) {
           <Carousel>
             {[...m.values()].map((g) => (
               <div key={g.n} className="ci" data-al={g.n}>
-                <img className="cv" src={cover(g.ts)} alt="" /><b>{g.n}</b><small>{nCan(g.ts.length)}</small>
+                <div className="cw"><img className="cv" src={cover(g.ts)} alt="" /></div><b>{g.n}</b><small>{nCan(g.ts.length)}</small>
               </div>
             ))}
           </Carousel>
@@ -219,25 +229,25 @@ function GroupView({ s, row }: { s: State; row: ReturnType<typeof useRow> }) {
   return (
     <>
       <Bar2>
-        <button className="ib" onClick={groupBack} aria-label="Volver"><Icon name="back" /></button>
+        <button className="rb" onClick={groupBack} aria-label="Volver"><Icon name="back" size={20} /></button>
         <span className="text-mut">{isA ? 'Artista' : 'Álbum'}</span>
       </Bar2>
-      <div className="gh flex items-center gap-3.5 pb-3.5 pt-1">
-        <img className="cv h-28 w-28 !rounded-xl" src={cover(all)} alt="" />
-        <div className="tx min-w-0 flex-1">
+      <div className="gh">
+        <img className="cv" src={cover(all)} alt="" />
+        <div className="tx">
           <b>{name}</b>
           <small>{meta}</small>
           {all.length > 0 && (
-            <div className="gb mt-2.5 flex flex-wrap gap-2">
-              <button onClick={() => playGroup(false)}><Icon name="play" size={16} />Reproducir</button>
-              <button onClick={() => playGroup(true)}><Icon name="shuf" size={16} />Aleatorio</button>
+            <div className="gb">
+              <button className="btn pri" onClick={() => playGroup(false)}><Icon name="play" size={18} />Reproducir</button>
+              <button className="btn" onClick={() => playGroup(true)}><Icon name="shuf" size={18} />Aleatorio</button>
             </div>
           )}
         </div>
       </div>
       {extra}
       <Bar2><b>Canciones</b><span className="cnt">{a.length}</span></Bar2>
-      {a.length ? a.map((t) => row(t)) : <Empty>{scanning ? 'Leyendo datos de las canciones…' : 'No hay canciones.'}</Empty>}
+      {a.length ? <Rows>{a.map((t) => row(t))}</Rows> : <Empty>{scanning ? 'Leyendo datos de las canciones…' : 'No hay canciones.'}</Empty>}
     </>
   );
 }
@@ -279,7 +289,7 @@ export function List() {
   else body = <PlainView s={s} row={row} />;
 
   return (
-    <div id="list" ref={ref} onClick={onClick} className="px-4 pb-[400px] pt-1 [touch-action:pan-y]">
+    <div id="list" ref={ref} onClick={onClick} className="wrap [touch-action:pan-y]">
       {body}
     </div>
   );

@@ -3,7 +3,8 @@ import { ls } from '../lib/storage';
 import { au } from '../audio/element';
 import { progressFx } from './progressFx';
 
-const PAL: Array<string | null> = [null, '#2563eb', '#16a34a', '#f59e0b', '#9333ea', '#06b6d4', '#ec4899'];
+/* tonos 600: el texto/ícono blanco encima se lee bien en todos (el acento por defecto cambia con el tema) */
+const PAL: Array<string | null> = [null, '#2563eb', '#16a34a', '#d97706', '#9333ea', '#0891b2', '#db2777'];
 const RS = document.documentElement.style;
 
 /** tono actual del modo RGB (null si no está activo): lo usa el visualizador para teñirse igual */
@@ -17,7 +18,21 @@ let prevAcc = '';
 let rgbCol = '';
 let rgbSc: Array<HTMLElement | null> | null = null;
 
-const setAcc = (c: string | null): void => { if (c) RS.setProperty('--acc', c); else RS.removeProperty('--acc'); };
+/** color del texto sobre el acento: blanco, salvo que el acento sea tan claro que el blanco no se lea */
+const lum = (c: string): number | null => {
+  const m = /^#([0-9a-f]{6})$/i.exec(c.trim()) || null;
+  const v = m ? [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16)) : (/rgb\((\d+),\s*(\d+),\s*(\d+)/.exec(c) || []).slice(1).map(Number);
+  if (v.length !== 3 || v.some((x) => isNaN(x))) return null;
+  const f = v.map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+  return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2];
+};
+const setAcc = (c: string | null): void => {
+  if (c) {
+    RS.setProperty('--acc', c);
+    const l = lum(c);
+    if (l != null && l > 0.4) RS.setProperty('--on-acc', '#2a0f18'); else RS.removeProperty('--on-acc');
+  } else { RS.removeProperty('--acc'); RS.removeProperty('--on-acc'); }
+};
 setAcc(ls.str('accC') || PAL[accI]);
 
 /* los mismos colores de la página: el acento por defecto (según tema) + la paleta de la bolita */

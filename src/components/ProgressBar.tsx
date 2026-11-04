@@ -67,7 +67,7 @@ export function ProgressBar() {
   const shown = drag != null && okDur(duration) ? (drag / 1000) * duration : time;
 
   return (
-    <>
+    <div className="pg">
       <div
         ref={wrap}
         className="skw"
@@ -87,10 +87,8 @@ export function ProgressBar() {
           }}
         />
       </div>
-      <div className="flex justify-between text-[13px] tabular-nums text-mut mt-1">
-        <span>{fmt(shown)}</span>
-        <span>{fmt(duration)}</span>
-      </div>
-    </>
+      <span className="tm l">{fmt(shown)}</span>
+      <span className="tm r">{fmt(duration)}</span>
+    </div>
   );
 }

@@ -12,12 +12,14 @@ interface Props {
   current: boolean;
   selected: boolean;
   unavailable: boolean;
+  /** ¿es favorita? (corazón relleno) */
+  faved: boolean;
+  /** veces que se ha reproducido */
+  plays?: number;
   /** cuántas veces se escuchó (Recientes) */
   count?: number;
   /** botón "agregar a la playlist" (recomendaciones) */
   add?: boolean;
-  /** corazón relleno para quitar de favoritas */
-  fav?: boolean;
   /* datos mutables de la canción, como primitivas para que memo repinte al cambiar */
   thumb?: string;
   title: string;
@@ -26,14 +28,19 @@ interface Props {
   name: string;
 }
 
-/** artista y álbum son tocables: abren su página (lo gestiona el listener global por data-ar / data-al) */
+/** artista y álbum son tocables: abren su página (lo gestiona el listener global por data-ar / data-al).
+    En pantallas anchas el álbum tiene su propia columna, así que aquí solo se muestra en móvil. */
 function Sub({ artist, album, name }: { artist: string; album: string; name: string }) {
   if (!artist && !album) return <>{name}</>;
   return (
     <>
       {artist && <span className="lk" data-ar={artist}>{artist}</span>}
-      {artist && album && ' · '}
-      {album && <span className="lk" data-al={album}>{album}</span>}
+      {album && (
+        <>
+          {artist && <span className="albm"> · </span>}
+          <span className="lk albm" data-al={album}>{album}</span>
+        </>
+      )}
     </>
   );
 }
@@ -55,16 +62,21 @@ export const TrackRow = memo(function TrackRow(p: Props) {
   return (
     <div
       ref={ref}
-      className={`t relative flex select-none items-center gap-3 border-b border-card px-1 py-3 [-webkit-touch-callout:none] ${p.current ? 'on' : ''} ${p.selected ? 'sel' : ''} ${p.unavailable ? 'na' : ''}`}
+      className={`t ${p.current ? 'on' : ''} ${p.selected ? 'sel' : ''} ${p.unavailable ? 'na' : ''}`}
       data-i={p.i}
       data-qi={p.k}
     >
       <span className="ck"><Icon name="check" size={16} /></span>
-      <img className="cv th h-12 w-12" src={p.thumb || GIF} alt="" />
-      <div className="i min-w-0 flex-1">
-        <b className="block truncate">{p.title}</b>
-        <small className="block truncate text-mut"><Sub artist={p.artist} album={p.album} name={p.name} /></small>
+      <div className="thw">
+        <img className="cv th" src={p.thumb || GIF} alt="" />
+        <span className="eqb" aria-hidden="true"><i /><i /><i /></span>
       </div>
+      <div className="i">
+        <b>{p.title}</b>
+        <small><Sub artist={p.artist} album={p.album} name={p.name} /></small>
+      </div>
+      <span className="alb">{p.album && <span className="lk" data-al={p.album}>{p.album}</span>}</span>
+      {p.plays ? <span className="plays">{p.plays}×</span> : <span className="plays" />}
       {p.count ? <span className="cnt">{p.count}×</span> : null}
       {p.k != null && (
         <>
@@ -73,13 +85,17 @@ export const TrackRow = memo(function TrackRow(p: Props) {
         </>
       )}
       {p.add && <button className="ib" data-ap={p.i} aria-label="Agregar a la playlist"><Icon name="plus" size={20} /></button>}
-      {p.fav && <button className="ib on" data-fv={p.i} aria-label="Quitar de favoritas"><Icon name="heartf" size={20} /></button>}
+      {p.k == null && (
+        <button className={`ib hrt ${p.faved ? 'on' : ''}`} data-fv={p.i} aria-label={p.faved ? 'Quitar de favoritas' : 'Agregar a favoritas'}>
+          <Icon name={p.faved ? 'heartf' : 'heart'} size={19} />
+        </button>
+      )}
       <button className="ib" data-m={p.i} aria-label="Más opciones"><Icon name="more" size={20} /></button>
     </div>
   );
 });
 
 /** props de una fila a partir de la canción (los datos mutables salen del propio objeto) */
-export function rowProps(t: Track, extra: { i: number; current: boolean; selected: boolean; unavailable: boolean }) {
+export function rowProps(t: Track, extra: { i: number; current: boolean; selected: boolean; unavailable: boolean; faved: boolean; plays?: number }) {
   return { t, thumb: t.thumb, title: t.title, artist: t.artist, album: t.album, name: t.name, ...extra };
 }

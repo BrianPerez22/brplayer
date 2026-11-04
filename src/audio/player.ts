@@ -409,8 +409,10 @@ export function initPlayer(): void {
     h('pause', () => au.pause());
     h('previoustrack', prev);
     h('nexttrack', () => next(false));
-    h('seekbackward', (d) => seekTo(au.currentTime - (d.seekOffset || 10)));
-    h('seekforward', (d) => seekTo(au.currentTime + (d.seekOffset || 10)));
+    /* IMPORTANTE (iPhone/iPad): si hay manejadores de seekbackward/seekforward, iOS los muestra en el Centro de control y la
+       pantalla de bloqueo EN LUGAR de los botones de canción anterior/siguiente (saltos de ±10 s). Por eso se quitan a propósito;
+       "seekto" sí se conserva porque solo habilita arrastrar la barra de tiempo del sistema. */
+    try { ms.setActionHandler('seekbackward', null); ms.setActionHandler('seekforward', null); } catch { /* acción no soportada */ }
     h('seekto', (d) => { if (d.seekTime != null) seekTo(d.seekTime); });
     h('stop', () => { au.pause(); au.currentTime = 0; });
   }

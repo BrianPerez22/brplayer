@@ -87,11 +87,12 @@ export function Equalizer() {
   return (
     <div id="eq" className="ovl" hidden={!open} onClick={(e) => { if (e.target === e.currentTarget) set({ eqOpen: false }); }}>
       <div className="card">
+        <i className="handle" />
         <div className="mh">
           <b>Ecualizador</b>
           <span className="flex items-center gap-2">
             <button className={`tg ${S.on ? 'on' : ''}`} aria-label="Activar ecualizador" onClick={() => { S.on = !S.on; upd(); }} />
-            <button className="ib" onClick={() => set({ eqOpen: false })} aria-label="Cerrar"><Icon name="close" /></button>
+            <button className="rb" onClick={() => set({ eqOpen: false })} aria-label="Cerrar"><Icon name="close" size={20} /></button>
           </span>
         </div>
         <div className="vl"><span>Volumen</span><VolumeWidget big /><small>{Math.round(S.vol * 100)}%</small></div>

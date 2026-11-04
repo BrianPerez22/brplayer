@@ -1,7 +1,7 @@
 import { useStore } from '../store/useStore';
 import { Icon } from './Icon';
 import { isFav } from '../store/selectors';
-import { toggleCurrentFav, showInfo } from '../lib/actions';
+import { toggleCurrentFav, showInfo, nowMenu } from '../lib/actions';
 import { shareTrack } from '../lib/links';
 import { toast } from '../store/useStore';
 import { S } from '../store/useStore';
@@ -44,4 +44,9 @@ export function ShareButton({ size = 22 }: { size?: number }) {
 
 export function InfoButton({ size = 22 }: { size?: number }) {
   return <button className="ib" onClick={() => void showInfo()} aria-label="Información"><Icon name="info" size={size} /></button>;
+}
+
+/** ⋯ acciones de la canción que suena: información, compartir, ecualizador, playlist… */
+export function MoreButton({ size = 22 }: { size?: number }) {
+  return <button className="ib b-more" onClick={nowMenu} aria-label="Más acciones de la canción"><Icon name="more" size={size} /></button>;
 }

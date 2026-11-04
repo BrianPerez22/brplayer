@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Playlist, SheetItem, SheetState, Stat, Track, ViewId } from '../types';
 import { ls } from '../lib/storage';
 import { SORT_OPTIONS } from '../lib/constants';
+import { getTheme, type Theme } from '../lib/theme';
 
 export interface InfoState {
   rows: Array<[string, string]>;
@@ -47,6 +48,7 @@ export interface State {
   menuOpen: boolean;
   homeMenuOpen: boolean;
   bmin: boolean;
+  theme: Theme;
 
   /** carátula grande de la canción actual (data URL) */
   coverSrc: string;
@@ -96,6 +98,7 @@ export const useStore = create<State>()(() => ({
   menuOpen: false,
   homeMenuOpen: false,
   bmin: ls.str('bmin') === '1',
+  theme: getTheme(),
 
   coverSrc: '',
   rev: 0,
@@ -114,6 +117,7 @@ useStore.subscribe((s, p) => {
   if (s.onlyOff !== p.onlyOff) ls.setStr('onlyoff', s.onlyOff ? '1' : '0');
   if (s.offMode !== p.offMode) ls.setStr('offm', s.offMode ? '1' : '0');
   if (s.bmin !== p.bmin) ls.setStr('bmin', s.bmin ? '1' : '0');
+  if (s.theme !== p.theme) ls.setStr('theme', s.theme);
 });
 
 /* ---------- Avisos, hojas y repintado ---------- */

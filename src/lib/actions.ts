@@ -9,6 +9,7 @@ import { downloadMany, downloadTrack } from './download';
 import { remoteHead, remoteTags } from './server';
 import { deleteTrack, scanTags } from './library';
 import { shareTrack, sharePlaylist } from './links';
+import * as AE from '../audio/engine';
 
 /* ---------- Favoritos ---------- */
 export function toggleFav(t: Track | undefined): void {
@@ -128,6 +129,23 @@ export async function rowMenu(i: number): Promise<void> {
   it.push(['Compartir canción', 'share', () => { void shareTrack(t, false); }]);
   if (t.remote) it.push(['Descargar al dispositivo', 'dlf', () => { void downloadTrack(t); }]);
   if (!t.remote) it.push(['Eliminar importada', 'trash', () => { void deleteTrack(S().tracks.indexOf(t)); }]);
+  openSheet(t.title, it);
+}
+
+/** menú "⋯" de la barra del reproductor: acciones de la canción que suena ahora */
+export function nowMenu(): void {
+  const s = S(), t = s.tracks[s.cur];
+  if (!t) { toast('No hay canción seleccionada'); return; }
+  const it: SheetItem[] = [
+    ['Información de la canción', 'info', () => { void showInfo(); }],
+    ['Compartir canción (desde este segundo)', 'share', () => { void shareTrack(t, true); }],
+    ['Ecualizador y sonido 3D', 'eq', () => { AE.init(); set({ eqOpen: true }); }],
+    ['Ver cola de reproducción', 'list', () => goTab('queue')],
+    ['Agregar a una playlist', 'plus', () => pickPlaylist(t)],
+  ];
+  if (t.artist) it.push(['Ir al artista', 'user', () => openGroup('ar:' + t.artist)]);
+  if (t.album) it.push(['Ir al álbum', 'disc', () => openGroup('al:' + t.album)]);
+  if (t.remote) it.push(['Descargar al dispositivo', 'dlf', () => { void downloadTrack(t); }]);
   openSheet(t.title, it);
 }
 

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { S, set, useStore } from './store/useStore';
 import { Header } from './components/Header';
+import { Sidebar } from './components/Sidebar';
 import { List } from './components/List';
 import { PlayerBar } from './components/PlayerBar';
 import { FullScreen } from './components/FullScreen';
@@ -12,14 +13,15 @@ import { exitSel, openGroup } from './lib/actions';
 import { IDLE } from './fx/idle';
 import { paintFavicon, rgbStart, rgbStop, isRgb } from './fx/accent';
 import { vz } from './visualizer/vz';
+import { applyTheme } from './lib/theme';
 
 /** clics globales: artista/álbum abren su página; tocar fuera cierra los menús */
 function useGlobalClicks() {
   useEffect(() => {
     const f = (e: MouseEvent) => {
       const el = e.target as HTMLElement;
-      if (!el.closest('#menu,#sortb')) set({ menuOpen: false });
-      if (!el.closest('#hb,#hm')) set({ homeMenuOpen: false });
+      if (!el.closest('.sortw')) set({ menuOpen: false });
+      if (!el.closest('[data-menu],#hm')) set({ homeMenuOpen: false });
       const lk = el.closest<HTMLElement>('[data-ar],[data-al]');
       if (lk) openGroup(lk.dataset.ar != null ? 'ar:' + lk.dataset.ar : 'al:' + lk.dataset.al);
     };
@@ -70,6 +72,7 @@ export default function App() {
   const selMode = useStore((s) => s.selMode);
   const bmin = useStore((s) => s.bmin);
   const playing = useStore((s) => s.playing);
+  const theme = useStore((s) => s.theme);
 
   useEffect(() => {
     paintFavicon();
@@ -81,14 +84,20 @@ export default function App() {
   useKeyboard();
 
   /* clases del <body> que usa el CSS: selección, barra minimizada, reproduciendo */
+  useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => { document.body.classList.toggle('selm', selMode); }, [selMode]);
   useEffect(() => { document.body.classList.toggle('bmin', bmin); }, [bmin]);
   useEffect(() => { document.body.classList.toggle('pl', playing); }, [playing]);
 
   return (
     <>
-      <Header />
-      <List />
+      <div id="app">
+        <Sidebar />
+        <div id="main">
+          <Header />
+          <List />
+        </div>
+      </div>
       <Toast />
       <PlayerBar />
       <FullScreen />
