@@ -11,7 +11,7 @@ import { initPlayer, toggle } from './audio/player';
 import { bootstrap } from './lib/library';
 import { exitSel, openGroup } from './lib/actions';
 import { IDLE } from './fx/idle';
-import { paintFavicon, rgbStart, rgbStop, isRgb } from './fx/accent';
+import { rgbStart, rgbStop, isRgb, syncFavicon } from './fx/accent';
 import { vz } from './visualizer/vz';
 import { applyTheme } from './lib/theme';
 
@@ -75,7 +75,6 @@ export default function App() {
   const theme = useStore((s) => s.theme);
 
   useEffect(() => {
-    paintFavicon();
     initPlayer();
     IDLE.init();
     void bootstrap();
@@ -84,7 +83,7 @@ export default function App() {
   useKeyboard();
 
   /* clases del <body> que usa el CSS: selección, barra minimizada, reproduciendo */
-  useEffect(() => { applyTheme(theme); }, [theme]);
+  useEffect(() => { applyTheme(theme); syncFavicon(); }, [theme]);
   useEffect(() => { document.body.classList.toggle('selm', selMode); }, [selMode]);
   useEffect(() => { document.body.classList.toggle('bmin', bmin); }, [bmin]);
   useEffect(() => { document.body.classList.toggle('pl', playing); }, [playing]);

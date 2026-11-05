@@ -2,7 +2,7 @@
    No toca el audio ni /api/: el audio y la lista siguen su propia lógica (precarga de audio en la caché 'player-audio-v1' y lista guardada).
    Con los archivos con hash de Vite no hay lista fija: lo que se pide una vez con red queda guardado. */
 const V = 'brplayer-shell-v3';
-const SHELL = ['./', 'index.html', 'assets/abrir-brplayer.svg'];
+const SHELL = ['./', 'index.html', 'assets/abrir-brplayer.svg', 'assets/icon.svg'];
 const AUDIO = /\.(mp3|flac|m4a|aac|wav|ogg|opus|aif|aiff|alac|caf)$/i;
 
 self.addEventListener('install', (e) => {

@@ -2,6 +2,7 @@
   "name": "brplayer",
   "private": true,
   "version": "2.0.0",
+  "license": "MPL-2.0",
   "description": "Reproductor de música de código abierto hecho para Safari: React + TypeScript + Tailwind.",
   "type": "module",
   "scripts": {

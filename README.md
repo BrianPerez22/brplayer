@@ -100,7 +100,7 @@ VITE_API_URL=https://tu-servidor.com/musica.json npm run build
 - **Barra de progreso viva**: agua, electricidad, fuego, burbujas, glitch o píxeles, elegido al azar para cada canción. Toca la bolita de la barra para cambiar de animación.
 - **Botones squishy** que se aplastan y rebotan al tocarlos.
 - **Bolita de color**: toca para cambiar el color de acento; mantenla pulsada (o mantén la barra espaciadora) para activar el modo RGB.
-- **Ícono distinto en cada carga**: la bolita del favicon cambia de color cada vez que abres la app.
+- **Favicon sincronizado**: la bolita plana usa el mismo color de acento que la página y cambia al instante al tocar la bolita de color.
 - **Sorpresas en inactividad**: si dejas las listas quietas más de 2 minutos, la interfaz se derrite, se pixela, se vuelve psicodélica o se pone RGB, hasta que vuelvas a tocarla.
 - Tema **claro y oscuro** automático y respeto por *reducir movimiento*.
 
@@ -203,3 +203,13 @@ Decisiones de diseño:
 ## Contribuir
 
 Es código abierto: úsalo, cámbialo, rómpelo y compártelo. Antes de abrir un PR, comprueba que `npm run build` pasa (incluye la comprobación de tipos).
+
+## Licencia
+
+BrPlayer se distribuye bajo la **Mozilla Public License 2.0 (MPL-2.0)**.
+
+Puedes usar, modificar y distribuir el proyecto, también con fines comerciales. Si modificas archivos cubiertos por la MPL, esas modificaciones deben publicarse bajo la misma licencia; puedes combinar el proyecto con código de otras licencias en archivos separados. Se conservan los avisos de copyright.
+
+- Texto completo: [LICENSE](LICENSE)
+- Copyright: © 2026 Brian Perez
+- Código fuente: <https://github.com/BrianPerez22/brplayer>

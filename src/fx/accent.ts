@@ -17,6 +17,7 @@ let rgbRAF = 0;
 let prevAcc = '';
 let rgbCol = '';
 let rgbSc: Array<HTMLElement | null> | null = null;
+let faviconColor = '';
 
 /** color del texto sobre el acento: blanco, salvo que el acento sea tan claro que el blanco no se lea */
 const lum = (c: string): number | null => {
@@ -34,6 +35,23 @@ const setAcc = (c: string | null): void => {
   } else { RS.removeProperty('--acc'); RS.removeProperty('--on-acc'); }
 };
 setAcc(ls.str('accC') || PAL[accI]);
+
+/** favicon plano: usa exactamente el color de acento que ve la interfaz */
+export function syncFavicon(): void {
+  const color = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#e11d48';
+  if (color === faviconColor) return;
+  faviconColor = color;
+  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="25" fill="${color}"/></svg>`;
+  let link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/svg+xml';
+    document.head.appendChild(link);
+  }
+  link.type = 'image/svg+xml';
+  link.href = `data:image/svg+xml,${encodeURIComponent(icon)}`;
+}
 
 /* los mismos colores de la página: el acento por defecto (según tema) + la paleta de la bolita */
 const darkNow = (): boolean => {
@@ -55,6 +73,7 @@ export function tapBall(): void {
   if (held) { held = false; return; }
   accI = (accI + 1) % PAL.length;
   setAcc(PAL[accI]);
+  syncFavicon();
   ls.setStr('accI', String(accI));
   ls.del('accC');
 }
@@ -71,7 +90,7 @@ export function rgbStart(per = 600, sc?: Array<HTMLElement | null>): void {
     const c = A.map((v, j) => Math.round(v + (B[j] - v) * e));
     rgbCol = 'rgb(' + c.join(',') + ')';
     if (!rgbSc) rgbState.hue = hueOf(c);
-    if (rgbSc) rgbSc.forEach((el) => el && el.style.setProperty('--acc', rgbCol)); else RS.setProperty('--acc', rgbCol);
+    if (rgbSc) rgbSc.forEach((el) => el && el.style.setProperty('--acc', rgbCol)); else { RS.setProperty('--acc', rgbCol); syncFavicon(); }
     if (au.paused) progressFx.once();
     rgbRAF = requestAnimationFrame(f);
   };
@@ -89,6 +108,7 @@ export function rgbStop(keep = true): void {
   if (rgbSc) { rgbSc.forEach((el) => el && el.style.removeProperty('--acc')); rgbSc = null; progressFx.once(); return; }
   if (keep && rgbCol) { RS.setProperty('--acc', rgbCol); ls.setStr('accC', rgbCol); }
   else if (prevAcc) RS.setProperty('--acc', prevAcc); else RS.removeProperty('--acc');
+  syncFavicon();
   progressFx.once();
 }
 
@@ -99,35 +119,3 @@ export const orbHold = {
   down(): void { held = false; clearTimeout(lp); lp = window.setTimeout(() => { held = true; rgbStart(); }, 450); },
   up(): void { rgbStop(true); },
 };
-
-/* ---------- Icono: bolita de un color distinto en cada carga ---------- */
-export function paintFavicon(): void {
-  try {
-    const last = parseFloat(ls.str('favH') || '');
-    let H = Math.random() * 360;
-    if (isFinite(last)) H = (last + 70 + Math.random() * 220) % 360;
-    ls.setStr('favH', String(H));
-    const mk = (n: number, bg?: string): string => {
-      const c = document.createElement('canvas');
-      c.width = c.height = n;
-      const x = c.getContext('2d') as CanvasRenderingContext2D;
-      if (bg) { x.fillStyle = bg; x.fillRect(0, 0, n, n); }
-      const r = n * (bg ? 0.28 : 0.42), q = x.createRadialGradient(n * 0.42, n * 0.38, r * 0.1, n / 2, n / 2, r);
-      q.addColorStop(0, `hsl(${H},100%,87%)`);
-      q.addColorStop(1, `hsl(${H},100%,65%)`);
-      x.fillStyle = q;
-      x.beginPath();
-      x.arc(n / 2, n / 2, r, 0, Math.PI * 2);
-      x.fill();
-      return c.toDataURL('image/png');
-    };
-    document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]').forEach((l) => l.remove());
-    const lk = (rel: string, href: string, sz: string) => {
-      const l = document.createElement('link');
-      l.rel = rel; l.type = 'image/png'; l.setAttribute('sizes', sz); l.href = href;
-      document.head.appendChild(l);
-    };
-    lk('icon', mk(128), '128x128');
-    lk('apple-touch-icon', mk(180, '#17171a'), '180x180');
-  } catch { /* sin canvas */ }
-}
