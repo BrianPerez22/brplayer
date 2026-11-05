@@ -14,6 +14,7 @@ import { ls } from '../lib/storage';
 import { SPEEDS } from '../lib/constants';
 import { cacheTrack, caching, cachedBlob } from '../lib/audioCache';
 import { ensureThumb } from '../lib/thumbs';
+import { rm } from '../room/hooks';
 
 /* ---------- Estado de trabajo (no necesita repintar) ---------- */
 let url: string | null = null; // URL de objeto de la fuente actual (si es local o precargada)
@@ -100,6 +101,8 @@ export async function load(i: number, play: boolean, push = true): Promise<void>
   if (i < 0 || i >= tracks.length) return;
   const t = tracks[i];
   if (!okT(t)) { toast('Sin conexión: esa canción es del servidor'); return; }
+  /* en una sala, quien no es anfitrión no carga por su cuenta: se lo pide al anfitrión y luego sigue su estado */
+  if (rm.role === 'guest' && !rm.applying) { if (play) rm.cmd({ a: 'play', t }); return; }
   const tok = ++loadTok;
   seekUntil = 0;
   clearTimeout(seekTm);
@@ -120,12 +123,13 @@ export async function load(i: number, play: boolean, push = true): Promise<void>
     if (tok !== loadTok) return;
   } else { url = URL.createObjectURL(t.blob as Blob); src = url; }
   au.src = src;
-  au.loop = S().repeat === 2;
+  au.loop = S().repeat === 2 && rm.role !== 'guest';
   counted = false;
   if (play) { const p = au.play(); if (p) p.catch(() => {}); }
+  rm.loaded(t, play, restore ?? 0);
   await updateNow();
   if (play) requestAnimationFrame(() => document.querySelector('.t.on')?.scrollIntoView({ block: 'nearest' }));
-  try { history.replaceState(null, '', '#' + new URLSearchParams({ c: t.sid || t.name })); } catch { /* sin history */ }
+  try { history.replaceState(null, '', rm.code ? '#room=' + rm.code : '#' + new URLSearchParams({ c: t.sid || t.name })); } catch { /* sin history */ }
   ls.setStr('last', String(t.id));
   t.th = false;
   ensureThumb(t, true);
@@ -190,6 +194,7 @@ export function pick(auto: boolean): number {
 let slpEnd = false;
 
 export function next(auto = false): void {
+  if (rm.role === 'guest') { if (!auto) rm.cmd({ a: 'next' }); return; } /* el anfitrión decide la siguiente */
   if (auto && slpEnd) { slpStop('Temporizador: fin de la canción'); return; }
   const i = pick(auto);
   if (i < 0) {
@@ -202,6 +207,7 @@ export function next(auto = false): void {
 }
 
 export function prev(): void {
+  if (rm.role === 'guest') { rm.cmd({ a: 'prev' }); return; }
   if (au.currentTime > 3) { au.currentTime = 0; return; }
   const { tracks, cur: c } = S();
   while (hist.length) {
@@ -214,10 +220,20 @@ export function prev(): void {
   }
 }
 
+/** reproducir/pausar; en una sala, un invitado se lo pide a la sala (o solo se suma si la sala ya suena) */
+export function setPlay(v: boolean): void {
+  if (rm.role === 'guest') {
+    if (v && rm.playing) { const p = au.play(); if (p) p.catch(() => {}); return; }
+    rm.cmd({ a: v ? 'resume' : 'pause' });
+    return;
+  }
+  if (v) { const p = au.play(); if (p) p.catch(() => {}); } else au.pause();
+}
+
 export function toggle(): void {
   const { tracks, cur: c } = S();
-  if (c < 0 && tracks.length) { void load(0, true); return; }
-  if (au.paused) { const p = au.play(); if (p) p.catch(() => {}); } else au.pause();
+  if (rm.role !== 'guest' && c < 0 && tracks.length) { void load(0, true); return; }
+  setPlay(au.paused);
 }
 
 /** canción aleatoria de toda la biblioteca */
@@ -288,6 +304,12 @@ const inSeek = (x: number): boolean => {
 };
 
 export function seekTo(sec: number): void {
+  if (rm.role === 'guest') { if (isFinite(sec)) rm.cmd({ a: 'seek', p: Math.max(0, sec) }); return; }
+  seekLocal(sec);
+}
+
+/** salta en este dispositivo (en una sala lo usa la propia sala para seguir al anfitrión) */
+export function seekLocal(sec: number): void {
   const t = cur();
   if (!t || !isFinite(sec)) return;
   const d = au.duration;
@@ -373,6 +395,7 @@ export function initPlayer(): void {
   au.addEventListener('play', () => { set({ playing: true }); if (ms) ms.playbackState = 'playing'; });
   au.addEventListener('pause', () => { set({ playing: false }); if (ms) ms.playbackState = 'paused'; });
   au.addEventListener('ended', () => {
+    if (rm.role === 'guest') return; /* en una sala, el anfitrión decide qué suena después */
     if (S().repeat === 2) { au.currentTime = 0; void au.play(); } else next(true);
   });
   au.addEventListener('playing', () => {
@@ -405,8 +428,8 @@ export function initPlayer(): void {
 
   if (ms) {
     const h = (a: MediaSessionAction, f: MediaSessionActionHandler) => { try { ms.setActionHandler(a, f); } catch { /* acción no soportada */ } };
-    h('play', () => { void au.play(); });
-    h('pause', () => au.pause());
+    h('play', () => setPlay(true));
+    h('pause', () => setPlay(false));
     h('previoustrack', prev);
     h('nexttrack', () => next(false));
     /* IMPORTANTE (iPhone/iPad): si hay manejadores de seekbackward/seekforward, iOS los muestra en el Centro de control y la

@@ -104,6 +104,12 @@ VITE_API_URL=https://tu-servidor.com/musica.json npm run build
 - **Sorpresas en inactividad**: si dejas las listas quietas más de 2 minutos, la interfaz se derrite, se pixela, se vuelve psicodélica o se pone RGB, hasta que vuelvas a tocarla.
 - Tema **claro y oscuro** automático y respeto por *reducir movimiento*.
 
+### Escuchar juntos (salas)
+- **☰ → Escuchar juntos** → **Crear sala**: se genera un **código** y un **enlace**. Quien abra el enlace entra solo (un toque en *Entrar a la sala*); también se puede pegar el código (o el enlace) en **Unirme**.
+- Todos escuchan **la misma canción al mismo tiempo**. Cualquiera puede pausar, saltar, mover la barra y **agregar canciones a la cola** (menú ⋯ de una canción, deslizar una fila…). La cola es compartida.
+- No hay base de datos ni servidor propio: la app sigue siendo estática. Las salas usan un buzón público (MQTT sobre WebSocket, `src/room/`); el que crea la sala es el anfitrión y su reproductor manda. Si el anfitrión sale, la sala se cierra.
+- Todos deben tener **la misma biblioteca del servidor** (las canciones importadas del dispositivo no se comparten).
+
 ### Atajos de teclado
 | Tecla | Acción |
 |---|---|

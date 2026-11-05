@@ -9,7 +9,7 @@ import { ls } from './storage';
 /** Enlaces para compartir: #c=<canción>&t=<segundo>, o #p=<nombre>&s=<11 caracteres por canción> para una playlist. */
 const base = (): string => location.href.split('#')[0];
 
-async function copy(s: string): Promise<boolean> {
+export async function copy(s: string): Promise<boolean> {
   try { await navigator.clipboard.writeText(s); return true; } catch {
     const a = document.createElement('textarea');
     a.value = s;

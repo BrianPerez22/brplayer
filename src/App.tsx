@@ -14,6 +14,8 @@ import { IDLE } from './fx/idle';
 import { rgbStart, rgbStop, isRgb, syncFavicon } from './fx/accent';
 import { vz } from './visualizer/vz';
 import { applyTheme } from './lib/theme';
+import { RoomModal } from './room/RoomModal';
+import { initRoom } from './room/room';
 
 /** clics globales: artista/álbum abren su página; tocar fuera cierra los menús */
 function useGlobalClicks() {
@@ -76,6 +78,7 @@ export default function App() {
 
   useEffect(() => {
     initPlayer();
+    initRoom();
     IDLE.init();
     void bootstrap();
   }, []);
@@ -103,6 +106,7 @@ export default function App() {
       <InfoModal />
       <Sheet />
       <Equalizer />
+      <RoomModal />
     </>
   );
 }

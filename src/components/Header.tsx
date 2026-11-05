@@ -10,6 +10,7 @@ import { enterSel, exitSel, goTab, selActions, selectAll } from '../lib/actions'
 import { nextTheme, themeLabel } from '../lib/theme';
 import { sleepActive, sleepAtEnd, sleepIn, sleepLabel, sleepOff, setSpeed } from '../audio/player';
 import * as AE from '../audio/engine';
+import { fmtCode, openRoom, useRoom } from '../room/room';
 
 const spdTxt = (v: number): string => String(v).replace('.', ',') + '×';
 
@@ -21,6 +22,7 @@ export function HomeMenu() {
   const offMode = useStore((s) => s.offMode);
   const theme = useStore((s) => s.theme);
   const off = useStore((s) => isOff(s));
+  const roomCode = useRoom((s) => s.code);
   const close = () => set({ homeMenuOpen: false });
   const item = (icon: IconName, label: string, run: () => void, hint?: string) => (
     <button onClick={() => { close(); run(); }}>
@@ -31,6 +33,7 @@ export function HomeMenu() {
   return (
     <div id="hm" className="pop animate-pop">
       {item('plus', 'Añadir canciones', pickFiles, 'Importa archivos de este dispositivo')}
+      {item('users', 'Escuchar juntos', openRoom, roomCode ? 'Sala ' + fmtCode(roomCode) : 'Crea una sala o únete a una')}
       {item('check', 'Seleccionar canciones', () => { enterSel(); toast('Toca las canciones para elegirlas'); })}
       {item('refresh', 'Actualizar biblioteca', () => void refreshLib(false))}
       {item('eq', 'Ecualizador y sonido 3D', () => { AE.init(); set({ eqOpen: true }); })}
@@ -92,6 +95,7 @@ export function Header() {
   const homeTab = useStore((s) => s.homeTab);
   const qn = useStore((s) => s.queue.length);
   const homeMenuOpen = useStore((s) => s.homeMenuOpen);
+  const inRoom = useRoom((s) => s.role !== 'none');
   const query = useStore((s) => s.query);
   const [q, setQ] = useState(query);
   const tm = useRef(0);
@@ -117,6 +121,7 @@ export function Header() {
                     onKeyDown={(e) => { if (e.key === 'Escape' && q) { e.preventDefault(); type(''); } }}
                   />
                 </label>
+                {inRoom && <button className="rb on" onClick={openRoom} aria-label="Sala de escuchar juntos"><Icon name="users" size={20} /></button>}
                 <SortButton className="max-lg:hidden" />
                 <Orb hold className="orb-s lg:!hidden" />
               </>
