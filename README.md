@@ -62,7 +62,7 @@ Si tu lista de canciones no vive en `/api/canciones`, cámbiala al compilar con 
 VITE_API_URL=https://tu-servidor.com/musica.json npm run build
 ```
 
-> **Publicar con GitHub Pages:** el repositorio incluye `.github/workflows/deploy.yml`, que compila y despliega en cada push a `main`. En *Settings → Pages* elige **Source: GitHub Actions**.
+> **Publicar con GitHub Pages:** el workflow `.github/workflows/deploy.yml` compila y despliega en cada push a `main` (o manualmente desde *Actions*). En *Settings → Pages* elige **Source: GitHub Actions**. El desarrollo local no cambia: usa `npm run dev` como siempre.
 
 ---
 
