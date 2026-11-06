@@ -1,1 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-single/
+
+# TypeScript cache
+tsconfig.tsbuildinfo
+
+# macOS
 .DS_Store
+
+# Vite cache (dentro de node_modules, pero por si acaso)
+.vite/
+
+# Environment variables (por seguridad)
+.env
+.env.local
+.env.*.local
+
+# Editor dirs
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
