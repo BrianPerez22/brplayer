@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '../components/Icon';
-import { cancelRoom, closeRoomUi, copyRoomCode, copyRoomLink, createRoom, fmtCode, joinRoom, leaveRoom, myId, setRoomName, shareRoom, useRoom } from './room';
+import { cancelRoom, closeRoomUi, copyRoomCode, copyRoomLink, createRoom, fmtCode, joinRoom, leaveRoom, myId, setRoomName, setSyncLook, shareRoom, useRoom } from './room';
 
 const field = 'w-full rounded-2xl bg-tint px-4 py-3 text-[16px] outline-none ring-1 ring-line focus:ring-2 focus:ring-acc';
 
@@ -13,6 +13,8 @@ export function RoomModal() {
   const members = useRoom((s) => s.members);
   const invite = useRoom((s) => s.invite);
   const name = useRoom((s) => s.name);
+  const lag = useRoom((s) => s.lag);
+  const syncLook = useRoom((s) => s.syncLook);
   const [typed, setTyped] = useState('');
   if (!open) return null;
 
@@ -54,10 +56,16 @@ export function RoomModal() {
             </li>
           ))}
         </ul>
+        <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-2xl bg-tint px-3.5 py-2.5">
+          <input type="checkbox" className="h-4 w-4 shrink-0" style={{ accentColor: 'var(--acc)' }} checked={syncLook} onChange={(e) => setSyncLook(e.target.checked)} />
+          <span className="min-w-0 flex-1 text-[14px] font-semibold">Colores compartidos<small className="block font-normal text-mut">Si alguien cambia el color o el tema, cambia para todos. Al salir vuelve el tuyo.</small></span>
+        </label>
         <p className="mt-4 text-[13px] text-mut">
-          Todos escuchan lo mismo a la vez. Cualquiera puede pausar, saltar canciones y agregar música a la cola (menú ⋯ de una canción).
+          Todos escuchan lo mismo a la vez. La música no pasa por el anfitrión: cada uno la recibe directo del servidor y la sala solo los mantiene sincronizados. Por eso aquí solo suena música del servidor.
+          Cualquiera puede pausar, saltar canciones y agregar música a la cola (menú ⋯ de una canción).
           {role === 'host' ? ' Si sales tú, la sala se cierra.' : ' Si el anfitrión sale, la sala se cierra.'}
         </p>
+        {role === 'guest' && lag > 0 && <p className="mt-2 text-[12px] text-mut">Latencia con la sala: {lag} ms</p>}
         <button className="btn mt-4 w-full" onClick={() => leaveRoom(role === 'host' ? 'Sala cerrada' : 'Saliste de la sala')}>{role === 'host' ? 'Cerrar sala' : 'Salir de la sala'}</button>
       </>
     );

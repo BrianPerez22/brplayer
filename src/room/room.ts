@@ -4,7 +4,12 @@
  * - Quien crea la sala es el ANFITRIÓN: su reproductor manda. Los demás son INVITADOS y siguen su estado.
  * - Todos los mensajes viajan por un "buzón" público (MQTT sobre WebSocket, ver mqtt.ts) en un tema con el código de la sala.
  *   El primer carácter del código dice qué broker usa la sala, así todos llegan al mismo.
+ * - La música NUNCA pasa por la sala ni por el anfitrión: cada dispositivo la baja directo del servidor. Por el buzón solo
+ *   viajan mensajes pequeños ("suena X, en esta posición, desde este instante"). En la sala solo suena música del servidor.
  * - Las canciones se identifican con h64(sid): todos deben tener la misma biblioteca del servidor.
+ * - Arranque programado: al cambiar de canción el anfitrión fija un instante común unos cientos de ms en el futuro; todos
+ *   cargan la canción mientras tanto y le dan al play a la vez (en vez de que el anfitrión arranque y los demás lleguen tarde).
+ * - Los colores (acento, modo RGB y tema claro/oscuro) también se comparten; al salir vuelve el color propio.
  * - Cualquiera puede pausar, saltar, mover la barra y agregar canciones a la cola; el anfitrión aplica la orden y
  *   publica el estado nuevo (canción, posición, si suena, cola, miembros). Un reloj compartido (ping/pong) compensa la demora.
  * - Si el anfitrión sale, la sala se cierra; a cada invitado le sigue sonando lo que tenía.
@@ -13,7 +18,9 @@ import { create } from 'zustand';
 import type { Track } from '../types';
 import { au } from '../audio/element';
 import { load, next, playSingle, prev, seekLocal, setQueue, setRestore } from '../audio/player';
-import { S, toast, useStore } from '../store/useStore';
+import { S, set, toast, useStore } from '../store/useStore';
+import { accHooks, accLook, applyAccLook, cleanAccLook, restoreAcc, type AccLook } from '../fx/accent';
+import { getTheme, type Theme } from '../lib/theme';
 import { h64 } from '../lib/util';
 import { ls } from '../lib/storage';
 import { copy } from '../lib/links';
@@ -33,15 +40,25 @@ interface RoomUi {
   /** código de una sala a la que te invitaron por enlace (pide confirmar con un toque) */
   invite: string;
   name: string;
+  /** latencia (ms) de ida y vuelta con el anfitrión; 0 si aún no se midió */
+  lag: number;
+  /** compartir colores con la sala */
+  syncLook: boolean;
 }
 export const useRoom = create<RoomUi>()(() => ({
-  role: 'none', code: '', status: 'idle', members: [], open: false, invite: '', name: ls.str('rname') || '',
+  role: 'none', code: '', status: 'idle', members: [], open: false, invite: '', name: ls.str('rname') || '', lag: 0, syncLook: ls.str('rlook') !== '0',
 }));
 const ui = useRoom.setState;
 
 export const openRoom = (): void => { ui({ open: true }); };
 export const closeRoomUi = (): void => { ui({ open: false, invite: '' }); };
 export function setRoomName(v: string): void { ls.setStr('rname', v); ui({ name: v }); }
+export function setSyncLook(v: boolean): void {
+  ls.setStr('rlook', v ? '1' : '0');
+  ui({ syncLook: v });
+  if (rm.role === 'none') return;
+  if (v) { rm.look = true; lookV = 0; if (rm.role === 'host') emitLook(); } else dropLook();
+}
 
 /* ---------- Códigos y enlaces ---------- */
 /** servicios de buzón públicos (el primero que responda); el primer carácter del código indica cuál */
@@ -108,6 +125,7 @@ const mapSids = (list: string[] | undefined): Track[] =>
 interface Msg {
   k: string; f: string; n?: string; a?: string; s?: string; q?: string[]; p?: number; c?: number; h?: number; to?: string;
   cur?: string; pl?: number; pos?: number; ts?: number; m?: Array<[string, string]>; host?: boolean;
+  r?: number; lk?: { a?: unknown; th?: unknown }; lv?: number; v?: number;
 }
 
 let net: Mqtt | null = null;
@@ -119,7 +137,9 @@ let reTm = 0;
 let reTry = 0;
 
 /* anfitrión */
-const peers = new Map<string, { n: string; seen: number }>();
+const peers = new Map<string, { n: string; seen: number; rtt: number }>();
+let pend: { at: number; pos: number } | null = null; /* arranque programado de la canción que acaba de cargar */
+let pendTm = 0;
 let loadedSid = ''; /* canción que ya está cargada en el reproductor (la actual puede estar aún descargándose) */
 
 /* invitado */
@@ -139,6 +159,15 @@ let localWarned = false;
 let unlocked = false;
 let unlockTok = 0;
 let unlockPos = 0;
+let curRtt = 0; /* latencia reciente con el anfitrión (ms) */
+let lastMsg: Msg | null = null; /* último estado del anfitrión: sirve para corregir el desfase entre estados */
+let startTm = 0;
+let lastFixAt = 0;
+let lookV = 0; /* versión de los colores de la sala (hora del anfitrión del último cambio) */
+let lookBusy = false;
+
+/** diferencia máxima (s) que se tolera antes de saltar a la posición correcta */
+const DRIFT = 0.45;
 
 function send(m: Omit<Msg, 'f'>): void {
   if (net) net.publish(JSON.stringify({ ...m, f: me }));
@@ -172,7 +201,7 @@ function reconnect(): void {
       reTry = 0;
       lastState = Date.now();
       if (rm.role === 'host') { ui({ status: 'live' }); syncMembersUi(); kick(); }
-      else { gotState = false; joinAt = Date.now(); send({ k: 'hello', n: myName() }); pingHost(); }
+      else { gotState = false; joinAt = Date.now(); send({ k: 'hello', n: myName(), r: curRtt }); pingHost(); }
     } catch {
       if (!inRoom()) return; /* mientras reconectaba, el usuario salió */
       if (++reTry > 8) leaveRoom('Se perdió la conexión con la sala');
@@ -197,7 +226,8 @@ export async function createRoom(): Promise<void> {
   rm.role = 'host';
   rm.code = curCode = code;
   peers.clear();
-  ui({ role: 'host', code, status: 'live', invite: '', members: [{ id: me, name: myName(), host: true }] });
+  startLook(true);
+  ui({ role: 'host', code, status: 'live', invite: '', members: [{ id: me, name: myName(), host: true }], lag: 0 });
   startTimers();
   setHash();
   kick();
@@ -249,14 +279,17 @@ export async function joinRoom(raw: string): Promise<void> {
   tickN = 0;
   tapWarned = false;
   missingWarned = '';
+  curRtt = 0;
+  lastMsg = null;
+  lastFixAt = 0;
   joinAt = lastState = Date.now();
-  ui({ role: 'guest', code, status: 'connecting', members: [] });
+  startLook(false);
+  ui({ role: 'guest', code, status: 'connecting', members: [], lag: 0 });
   startTimers();
   setHash();
   send({ k: 'hello', n: myName() });
   pingHost();
-  setTimeout(pingHost, 500);
-  setTimeout(pingHost, 1200);
+  [400, 900, 1600, 2600].forEach((ms) => setTimeout(pingHost, ms)); /* varias muestras al entrar: el reloj compartido queda afinado enseguida */
 }
 
 /** cancela un intento de conexión o sale de la sala */
@@ -274,6 +307,10 @@ export function leaveRoom(msg?: string): void {
   stopTimers();
   clearTimeout(kickTm);
   clearTimeout(reTm);
+  clearTimeout(pendTm);
+  clearTimeout(startTm);
+  pend = null;
+  lastMsg = null;
   const c = net;
   net = null;
   if (c) setTimeout(() => c.close(), 200); /* da tiempo a que salga el "bye" */
@@ -284,8 +321,9 @@ export function leaveRoom(msg?: string): void {
   hostId = '';
   gotState = false;
   peers.clear();
+  dropLook();
   restoreAfterUnlock();
-  ui({ role: 'none', code: '', status: 'idle', members: [], invite: '' });
+  ui({ role: 'none', code: '', status: 'idle', members: [], invite: '', lag: 0 });
   if (role === 'none') return;
   const t = S().tracks[S().cur];
   try { history.replaceState(null, '', t ? '#' + new URLSearchParams({ c: t.sid || t.name }) : location.pathname + location.search); } catch { /* sin history */ }
@@ -319,7 +357,7 @@ function hostMsg(m: Msg): void {
   const touch = (): void => {
     const old = peers.get(m.f);
     const n = clean(m.n) || (old ? old.n : '') || 'Invitado';
-    peers.set(m.f, { n, seen: Date.now() });
+    peers.set(m.f, { n, seen: Date.now(), rtt: typeof m.r === 'number' && m.r >= 0 && m.r < 10000 ? m.r : old ? old.rtt : 0 });
     if (!old) { toast(n + ' se unió a la sala'); syncMembersUi(); kick(); }
   };
   switch (m.k) {
@@ -332,6 +370,7 @@ function hostMsg(m: Msg): void {
     }
     case 'ping': send({ k: 'pong', to: m.f, c: m.c, h: Date.now() }); break;
     case 'cmd': touch(); doCmd(m); break;
+    case 'look': remoteLook(m); break;
   }
 }
 
@@ -351,11 +390,43 @@ function publishState(pos?: number, play?: boolean): void {
   const t = s.tracks[s.cur];
   const cur = t && t.remote ? hOf(t) : '';
   if (cur && cur !== loadedSid) return; /* la canción actual aún se está cargando: se publica al terminar */
+  /* con un arranque programado el estado dice "empieza en `at` desde `pos`": ts en el futuro = todavía no suena */
+  const sch = pend && Date.now() < pend.at ? pend : null;
   send({
-    k: 'state', cur, pl: (play ?? !au.paused) ? 1 : 0, pos: pos ?? (au.currentTime || 0), ts: Date.now(),
+    k: 'state', cur, pl: sch || (play ?? !au.paused) ? 1 : 0, pos: sch ? sch.pos : pos ?? (au.currentTime || 0), ts: sch ? sch.at : Date.now(),
     q: s.queue.filter((x) => x.remote).map(hOf), m: memberList(),
+    ...(useRoom.getState().syncLook ? { lk: snapLook(), lv: lookV } : {}),
   });
 }
+
+/** margen entre "se decidió" y "suena": lo justo para que el invitado más lento reciba el mensaje y cargue la canción */
+function leadMs(): number {
+  let r = 0;
+  peers.forEach((p) => { if (p.rtt > r) r = p.rtt; });
+  return Math.min(2500, Math.max(800, r / 2 + 700));
+}
+
+function startPend(): void {
+  if (!pend) return;
+  pend = null;
+  const p = au.play();
+  if (p) p.catch(() => {});
+}
+
+/* El reproductor del anfitrión pregunta aquí antes de dar play a una canción nueva (solo si hay invitados) */
+rm.defer = (_t: Track, pos: number): boolean => {
+  clearTimeout(pendTm);
+  pend = null;
+  if (rm.role !== 'host' || !peers.size) return false;
+  const at = Date.now() + leadMs();
+  pend = { at, pos };
+  pendTm = window.setTimeout(startPend, at - Date.now());
+  return true;
+};
+rm.cancel = (): void => {
+  clearTimeout(pendTm);
+  if (pend) { pend = null; kick(); }
+};
 
 /** publica el estado en un instante (agrupa varios cambios seguidos) */
 function kick(pos?: number, play?: boolean): void {
@@ -374,7 +445,7 @@ function doCmd(m: Msg): void {
       else { const p = au.play(); if (p) p.catch(() => {}); }
       break;
     }
-    case 'pause': au.pause(); break;
+    case 'pause': rm.cancel(); au.pause(); break;
     case 'seek': if (typeof m.p === 'number' && isFinite(m.p)) seekLocal(m.p); break;
     case 'next': next(false); break;
     case 'prev': prev(); break;
@@ -390,6 +461,7 @@ const pingHost = (): void => {
   send({ k: 'ping', c: Date.now() });
 };
 const hostNow = (): number => Date.now() + offset;
+accHooks.clock = () => Date.now() + (rm.role === 'guest' ? offset : 0);
 
 function guestMsg(m: Msg): void {
   if (m.k === 'state') {
@@ -398,7 +470,10 @@ function guestMsg(m: Msg): void {
   } else if (m.k === 'pong') {
     if (m.to !== me || typeof m.c !== 'number' || typeof m.h !== 'number') return;
     const now = Date.now(), rtt = now - m.c;
+    if (rtt >= 0 && rtt < 10000) { curRtt = curRtt ? curRtt * 0.6 + rtt * 0.4 : rtt; ui({ lag: Math.round(curRtt) }); }
     if (rtt >= 0 && rtt < bestRtt) { bestRtt = rtt; offset = m.h + rtt / 2 - now; }
+  } else if (m.k === 'look') {
+    remoteLook(m);
   } else if (m.k === 'bye' && m.host && m.f === hostId) {
     leaveRoom('El anfitrión cerró la sala. Lo que suena sigue sonando');
   }
@@ -413,8 +488,9 @@ function guestTick(): void {
     return;
   }
   if (useRoom.getState().status === 'live' && now - lastState > 25000) { leaveRoom('Se perdió al anfitrión: saliste de la sala'); return; }
-  if (tickN % 5 === 0) send({ k: 'hb', n: myName() });
+  if (tickN % 5 === 0) send({ k: 'hb', n: myName(), r: Math.round(curRtt) });
   if (tickN % 7 === 0) pingHost();
+  if (lastMsg) correct(lastMsg); /* el desfase se vigila cada 2 s, no solo cuando llega un estado */
 }
 
 /** posición que debería tener ahora mismo la canción, según el último estado del anfitrión */
@@ -435,8 +511,37 @@ function playLocal(): void {
   }
 }
 
+/** salta a la posición correcta si el desfase con el anfitrión pasa de DRIFT (no toca nada mientras carga o se recarga) */
+function correct(m: Msg): void {
+  if (!m.pl || !m.cur || rm.role !== 'guest') return;
+  const now = S().tracks[S().cur];
+  if (!now || hOf(now) !== m.cur || loadedSid !== m.cur) return;
+  if (hostNow() < (m.ts || 0) - 40) return; /* todavía no empieza */
+  if (au.paused || au.seeking || au.readyState < 3) return;
+  if (performance.now() - lastFixAt < 4000) return;
+  const e = expectedPos(m);
+  if (Math.abs(au.currentTime - e) > DRIFT) { lastFixAt = performance.now(); seekLocal(e); }
+}
+
+/** da play justo cuando el anfitrión empieza; si la canción aún no está lista, reintenta unos instantes */
+function armStart(wait: number): void {
+  clearTimeout(startTm);
+  let tries = 0;
+  const go = (): void => {
+    startTm = 0;
+    const m = lastMsg;
+    if (rm.role !== 'guest' || !m || !m.pl) return;
+    if (loadedSid !== m.cur && tries++ < 40) { startTm = window.setTimeout(go, 100); return; }
+    playLocal();
+    const e = expectedPos(m);
+    if (au.readyState >= 1 && Math.abs(au.currentTime - e) > DRIFT) { lastFixAt = performance.now(); seekLocal(e); }
+  };
+  startTm = window.setTimeout(go, Math.max(0, wait));
+}
+
 function applyState(m: Msg): void {
   lastState = Date.now();
+  lastMsg = m;
   rm.playing = !!m.pl;
   const first = !gotState;
   if (first) { gotState = true; unlocked = false; unlockTok++; }
@@ -444,6 +549,9 @@ function applyState(m: Msg): void {
     status: 'live',
     members: (Array.isArray(m.m) ? m.m : []).map(([id, name], i) => ({ id: String(id), name: clean(name) || 'Invitado', host: i === 0 })),
   });
+
+  /* colores de la sala */
+  if (rm.look && m.lk && typeof m.lv === 'number' && m.lv > lookV) applyLook(m.lk, m.lv);
 
   /* cola compartida */
   const q = mapSids(m.q);
@@ -454,34 +562,93 @@ function applyState(m: Msg): void {
   }
 
   /* canción actual */
-  if (!m.cur) { if (!au.paused) au.pause(); return; }
+  if (!m.cur) { clearTimeout(startTm); if (!au.paused) au.pause(); return; }
   const idx = S().tracks.findIndex((t) => t.remote && hOf(t) === m.cur);
   if (idx < 0) {
+    clearTimeout(startTm);
     if (missingWarned !== m.cur) { missingWarned = m.cur; toast('Esa canción no está en tu biblioteca'); }
     if (!au.paused) au.pause();
     return;
   }
+  /* ts en el futuro = el anfitrión programó el arranque: se carga ya y se da play a la vez que él */
+  const wait = m.pl ? (m.ts || 0) - hostNow() : 0;
+  const future = wait > 40;
   const now = S().tracks[S().cur];
   if (forceReload || !now || hOf(now) !== m.cur) {
     forceReload = false;
     loading = true;
     lastLoadAt = performance.now();
-    setRestore(expectedPos(m));
+    clearTimeout(startTm);
+    setRestore(future ? m.pos || 0 : expectedPos(m));
     rm.applying = true;
-    try { void load(idx, !!m.pl, false); } finally { rm.applying = false; }
+    try { void load(idx, !future && !!m.pl, false); } finally { rm.applying = false; }
+    if (future) armStart(wait);
     return;
   }
 
   /* misma canción: reproducir/pausar se aplica siempre; el desfase se corrige solo cuando ya terminó de cargar */
   const settled = (!loading || performance.now() - lastLoadAt > 15000) && au.readyState >= 1 && !au.seeking;
   if (m.pl) {
-    if (au.paused) playLocal();
-    if (settled && Math.abs(au.currentTime - expectedPos(m)) > 1) seekLocal(expectedPos(m));
+    if (future) {
+      if (!au.paused) au.pause();
+      if (settled && Math.abs(au.currentTime - (m.pos || 0)) > 0.5) seekLocal(m.pos || 0);
+      armStart(wait);
+    } else {
+      clearTimeout(startTm);
+      if (au.paused) playLocal();
+      correct(m);
+    }
   } else {
+    clearTimeout(startTm);
     if (!au.paused) au.pause();
     if (settled && Math.abs(au.currentTime - (m.pos || 0)) > 0.5) seekLocal(m.pos || 0);
   }
 }
+
+/* ===================== COLORES COMPARTIDOS ===================== */
+const roomNow = (): number => Date.now() + (rm.role === 'guest' ? offset : 0);
+const snapLook = (): { a: AccLook; th: Theme } => ({ a: accLook(), th: S().theme });
+
+/** activa los colores de la sala al entrar (si la opción está encendida) */
+function startLook(host: boolean): void {
+  lookV = host ? Date.now() : 0;
+  rm.look = useRoom.getState().syncLook;
+}
+
+/** deja de usar los colores de la sala y recupera los propios */
+function dropLook(): void {
+  if (!rm.look) return;
+  rm.look = false;
+  lookBusy = true;
+  try { restoreAcc(); set({ theme: getTheme() }); } finally { lookBusy = false; }
+}
+
+function applyLook(l: { a?: unknown; th?: unknown }, v: number): void {
+  lookV = v;
+  const a = cleanAccLook(l.a);
+  lookBusy = true;
+  try {
+    if (a) applyAccLook(a);
+    if (l.th === 'auto' || l.th === 'light' || l.th === 'dark') { if (S().theme !== l.th) set({ theme: l.th }); }
+  } finally { lookBusy = false; }
+}
+
+/** alguien de la sala cambió el color: se aplica aquí tal cual (el último cambio manda) */
+function remoteLook(m: Msg): void {
+  if (!rm.look || !m.lk || typeof m.v !== 'number' || !isFinite(m.v) || m.v <= lookV) return;
+  applyLook(m.lk, m.v);
+  if (rm.role === 'host') kick();
+}
+
+/** el usuario cambió el color o el tema: se avisa a todos */
+function emitLook(): void {
+  if (rm.role === 'none' || !rm.look || lookBusy) return;
+  lookV = Math.max(lookV + 1, roomNow());
+  send({ k: 'look', lk: snapLook(), v: lookV });
+  if (rm.role === 'host') kick();
+}
+accHooks.onChange = emitLook;
+useStore.subscribe((s, p) => { if (s.theme !== p.theme) emitLook(); });
 
 /* ---------- Conexión con el reproductor ---------- */
 rm.cmd = (c: RoomCmd): void => {
@@ -495,12 +662,14 @@ rm.cmd = (c: RoomCmd): void => {
 
 rm.loaded = (t: Track, play: boolean, pos: number): void => {
   loadedSid = t.remote ? hOf(t) : '';
-  if (rm.role === 'host') kick(pos, play);
+  if (rm.role === 'host') { if (pend) publishState(); else kick(pos, play); }
 };
 
 /* el anfitrión publica cada cambio del reproductor */
 ['pause', 'playing', 'seeked'].forEach((ev) => au.addEventListener(ev, () => kick()));
 ['loadedmetadata', 'error'].forEach((ev) => au.addEventListener(ev, () => { loading = false; }));
+/* al invitado, cuando termina de llenar el búfer y suena, se le ajusta la posición una vez */
+au.addEventListener('playing', () => { if (rm.role === 'guest' && lastMsg) setTimeout(() => { if (lastMsg) correct(lastMsg); }, 60); });
 
 /* la cola es compartida: lo que un invitado agrega o quita se le pide al anfitrión; si cambia en el anfitrión, se publica */
 useStore.subscribe((s, p) => {

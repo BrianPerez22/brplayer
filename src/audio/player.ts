@@ -101,6 +101,8 @@ export async function load(i: number, play: boolean, push = true): Promise<void>
   if (i < 0 || i >= tracks.length) return;
   const t = tracks[i];
   if (!okT(t)) { toast('Sin conexión: esa canción es del servidor'); return; }
+  /* en una sala solo suena música del servidor: lo local no se comparte, así que no se reproduce */
+  if (rm.role !== 'none' && !t.remote) { toast('En la sala solo suena música del servidor'); return; }
   /* en una sala, quien no es anfitrión no carga por su cuenta: se lo pide al anfitrión y luego sigue su estado */
   if (rm.role === 'guest' && !rm.applying) { if (play) rm.cmd({ a: 'play', t }); return; }
   const tok = ++loadTok;
@@ -125,7 +127,8 @@ export async function load(i: number, play: boolean, push = true): Promise<void>
   au.src = src;
   au.loop = S().repeat === 2 && rm.role !== 'guest';
   counted = false;
-  if (play) { const p = au.play(); if (p) p.catch(() => {}); }
+  /* anfitrión con invitados: la sala fija un instante de arranque común (rm.defer) en vez de sonar ya */
+  if (play && !rm.defer(t, restore ?? 0)) { const p = au.play(); if (p) p.catch(() => {}); }
   rm.loaded(t, play, restore ?? 0);
   await updateNow();
   if (play) requestAnimationFrame(() => document.querySelector('.t.on')?.scrollIntoView({ block: 'nearest' }));
@@ -227,7 +230,7 @@ export function setPlay(v: boolean): void {
     rm.cmd({ a: v ? 'resume' : 'pause' });
     return;
   }
-  if (v) { const p = au.play(); if (p) p.catch(() => {}); } else au.pause();
+  if (v) { const p = au.play(); if (p) p.catch(() => {}); } else { rm.cancel(); au.pause(); }
 }
 
 export function toggle(): void {

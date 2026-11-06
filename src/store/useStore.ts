@@ -3,6 +3,7 @@ import type { Playlist, SheetItem, SheetState, Stat, Track, ViewId } from '../ty
 import { ls } from '../lib/storage';
 import { SORT_OPTIONS } from '../lib/constants';
 import { getTheme, type Theme } from '../lib/theme';
+import { rm } from '../room/hooks';
 
 export interface InfoState {
   rows: Array<[string, string]>;
@@ -120,7 +121,7 @@ useStore.subscribe((s, p) => {
   if (s.onlyFlac !== p.onlyFlac) ls.setStr('onlyflac', s.onlyFlac ? '1' : '0');
   if (s.offMode !== p.offMode) ls.setStr('offm', s.offMode ? '1' : '0');
   if (s.bmin !== p.bmin) ls.setStr('bmin', s.bmin ? '1' : '0');
-  if (s.theme !== p.theme) ls.setStr('theme', s.theme);
+  if (s.theme !== p.theme && !rm.look) ls.setStr('theme', s.theme);
 });
 
 /* ---------- Avisos, hojas y repintado ---------- */
