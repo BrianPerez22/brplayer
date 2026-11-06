@@ -12,7 +12,7 @@
 
 :root {
   color-scheme: light;
-  --acc: #e11d48; --on-acc: #fff; --fg: #2a1820; --mut: #75636c; --m: 0;
+  --acc: #e11d48; --on-acc: #fff; --fg: #2a1820; --mut: #75636c;
   --bg: color-mix(in srgb, var(--acc) 5%, #fffafb);
   --card: #fff;
   --ph: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgb(128,112,122)' stroke-opacity='.6' stroke-width='1.6' stroke-linecap='round'><path d='M9 18V5l11-2v13'/><circle cx='6' cy='18' r='3'/><circle cx='17' cy='16' r='3'/></svg>");
@@ -492,28 +492,9 @@ button:not(:disabled), [role="button"], .bd .th { transition: transform .6s cubi
 button:not(:disabled):active, [role="button"]:active { transform: scale(1.12, .84); transition-duration: .07s; }
 .vb { transition: color .25s, transform .25s cubic-bezier(.3, 2.2, .5, 1); }
 
-/* ---------- Efectos raros en inactividad (derretir y psicodelia son CSS; el pixelado es un canvas) ---------- */
-body[class*="fx-"] :is(.t b, .t small, .t .cnt, .t .cv, .t .ib, .t .x, .plc, .bar2 b, .bar2 button, .ci b, .ci small, .ci img, #empty, .hero h2, .hero p, .nv span, .t .alb, .search input, header .rb) { transform-origin: 50% 0; animation-duration: 7s; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
-body[class*="fx-"] :is(.t b, .t small, .t .cnt, .t .cv, .t .ib, .t .x, .plc, .bar2 b, .bar2 button, .ci b, .ci small, .ci img, #empty, .hero h2, .hero p, .nv span, .t .alb, .search input, header .rb):nth-child(2n) { --r: .7; animation-duration: 9s; animation-delay: -3s; }
-body[class*="fx-"] :is(.t b, .t small, .t .cnt, .t .cv, .t .ib, .t .x, .plc, .bar2 b, .bar2 button, .ci b, .ci small, .ci img, #empty, .hero h2, .hero p, .nv span, .t .alb, .search input, header .rb):nth-child(3n) { --r: 1.25; animation-duration: 6s; animation-delay: -1.5s; }
-body[class*="fx-"] :is(.t b, .t small, .t .cnt, .t .cv, .t .ib, .t .x, .plc, .bar2 b, .bar2 button, .ci b, .ci small, .ci img, #empty, .hero h2, .hero p, .nv span, .t .alb, .search input, header .rb):nth-child(5n) { --r: .5; animation-duration: 11s; animation-delay: -5s; }
-body.fx-melt :is(.t b, .t small, .t .cnt, .t .cv, .t .ib, .t .x, .plc, .bar2 b, .bar2 button, .ci b, .ci small, .ci img, #empty, .hero h2, .hero p, .nv span, .t .alb, .search input, header .rb) { animation-name: fxm; text-shadow: 0 calc(var(--m) * var(--r, 1) * 4px) calc(var(--m) * 3px) currentColor; }
-body.fx-melt :is(.t b, .t small, .ci b, .ci small, .bar2 b, .hero h2) { filter: blur(calc(var(--m) * .7px)); }
-@keyframes fxm {
-  0%, 100% { transform: translateY(calc(var(--m) * var(--r, 1) * 2px)) scale(1, calc(1 + var(--m) * var(--r, 1) * .2)) skewX(calc(var(--m) * -1.5deg)); }
-  50% { transform: translateY(calc(var(--m) * var(--r, 1) * 6px)) scale(calc(1 + var(--m) * .02), calc(1 + var(--m) * var(--r, 1) * .5)) skewX(calc(var(--m) * 1.5deg)); }
-}
-body.fx-lsd :is(.t b, .t small, .t .cnt, .t .cv, .t .ib, .t .x, .plc, .bar2 b, .bar2 button, .ci b, .ci small, .ci img, #empty, .hero h2, .hero p, .nv span, .t .alb, .search input, header .rb) { animation-name: fxl; text-shadow: calc(var(--m) * -2px) 0 rgba(255, 0, 140, calc(var(--m) * .55)), calc(var(--m) * 2px) 0 rgba(0, 210, 255, calc(var(--m) * .55)); }
-body.fx-lsd :is(.t .cv, .ci img) { filter: hue-rotate(calc(var(--m) * 45deg)) saturate(calc(1 + var(--m) * .5)); }
-@keyframes fxl {
-  0%, 100% { transform: translate(0, 0) rotate(0) scale(1); }
-  25% { transform: translate(calc(var(--m) * var(--r, 1) * 3px), calc(var(--m) * var(--r, 1) * -2px)) rotate(calc(var(--m) * var(--r, 1) * 1.8deg)) scale(calc(1 + var(--m) * .05)); }
-  50% { transform: translate(calc(var(--m) * var(--r, 1) * -2px), calc(var(--m) * var(--r, 1) * 3px)) rotate(calc(var(--m) * var(--r, 1) * -1.4deg)) scale(calc(1 - var(--m) * .04)); }
-  75% { transform: translate(calc(var(--m) * var(--r, 1) * -3px), calc(var(--m) * var(--r, 1) * -1px)) rotate(calc(var(--m) * var(--r, 1) * 2.2deg)) scale(calc(1 + var(--m) * .06)); }
-}
-#pxo { position: fixed; left: 0; top: 0; z-index: 19; pointer-events: none; opacity: 0; transition: opacity 1.2s; }
-#pxo.on { opacity: 1; }
-#pxo.off { transition-duration: .45s; }
+/* ---------- Efectos en inactividad: una sola capa de manchas de color (el resto lo anima fx/idle.ts con transform) ---------- */
+#fxo { position: fixed; inset: 0; z-index: 19; pointer-events: none; overflow: hidden; contain: strict; opacity: 0; }
+#fxo i { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; background: radial-gradient(closest-side, var(--c), transparent); will-change: transform; }
 
 /* movimiento reducido: sin animaciones ni transiciones decorativas */
 @media (prefers-reduced-motion: reduce) {

@@ -1,207 +1,148 @@
 /**
- * Sorpresas en inactividad: si las listas quedan quietas más de 2 minutos, la interfaz se derrite,
- * se pixela, se vuelve psicodélica o se pone RGB, hasta que vuelvas a tocarla.
- * Derretir y psicodelia son CSS (clases fx-melt / fx-lsd en <body> + variable --m); el pixelado trabaja sobre una "foto" de la interfaz.
+ * Sorpresas en inactividad: si no tocas nada durante 2 minutos, la interfaz empieza a "derretirse", se vuelve psicodélica
+ * o se pone RGB, hasta que vuelvas a tocarla.
+ *
+ * Diseño (pensado para no cargar el navegador):
+ *  - Solo se animan `transform` y `opacity`, que el navegador resuelve en la GPU sin recalcular estilos ni repintar.
+ *  - Se animan unos pocos bloques grandes (cabecera, lista, menú lateral) y UNA capa superpuesta; nunca cada fila.
+ *  - Las animaciones usan la API nativa Web Animations: no hay JS por fotograma ni variables CSS cambiando.
+ *  - Todo se cancela al primer gesto del usuario y también al ocultar la pestaña.
+ * Para apagarlo del todo: localStorage.setItem('idlefx', '0') (o ls 'idlefx' = '0').
  */
 import { rgbStart, rgbStop } from './accent';
 import { S } from '../store/useStore';
+import { ls } from '../lib/storage';
 import { reducedMotion } from '../lib/util';
 
-const RS = document.documentElement.style;
+type FxName = 'melt' | 'lsd' | 'rgb';
+const NAMES: FxName[] = ['melt', 'lsd', 'rgb'];
 
-/* ---------- Pixelado progresivo: foto de la interfaz (SVG con foreignObject) y se va pixelando sobre ella ---------- */
-const PXL = (() => {
-  let cv: HTMLCanvasElement | null = null;
-  let ox: CanvasRenderingContext2D | null = null;
-  let im: HTMLImageElement | null = null;
-  let run = 0, t0 = 0, tmr = 0, snapT = 0, busy = 0, dpr = 1, W = 0, H = 0, DUR = 55000;
-  const MAXB = 12;
-  const pool: HTMLCanvasElement[] = [];
-  const tc = (i: number, w: number, h: number): HTMLCanvasElement => {
-    const c = pool[i] || (pool[i] = document.createElement('canvas'));
-    if (c.width !== w) c.width = w;
-    if (c.height !== h) c.height = h;
-    return c;
-  };
+/** velocidad relativa de cada efecto (10 = normal) */
+const SPD: Record<FxName, number> = { melt: 10, lsd: 10, rgb: 5 };
 
-  /* los estilos se cargan con <link>: se obtiene su texto (fetch, o cssRules si falla) una sola vez */
-  let cssP: Promise<string> | null = null;
-  const sheetText = (l: HTMLLinkElement): string => {
-    try { return [...(l.sheet as CSSStyleSheet).cssRules].map((r) => r.cssText).join('\n'); } catch { return ''; }
-  };
-  const getCSS = (): Promise<string> =>
-    cssP || (cssP = Promise.all(
-      [...document.querySelectorAll<HTMLLinkElement>('link[rel~="stylesheet"]')].map((l) =>
-        fetch(l.href).then((r) => (r.ok ? r.text() : Promise.reject())).catch(() => sheetText(l))),
-    ).then((a) => a.concat([...document.querySelectorAll('style')].map((s) => s.textContent || '')).join('\n')));
+/** transformación de cada efecto para una amplitud `a` (0..1) y un sentido `d` (-1 | 1) */
+const FRAME: Record<'melt' | 'lsd', (a: number, d: number) => string> = {
+  melt: (a, d) => `translateY(${8 * a}px) scaleY(${1 + 0.03 * a}) skewX(${a * d}deg)`,
+  lsd: (a, d) => `translate(${3 * a * d}px, ${-2 * a}px) rotate(${0.5 * a * d}deg) scale(${1 + 0.015 * a})`,
+};
 
-  async function snap(): Promise<HTMLImageElement> {
-    const raw = await getCSS();
-    return new Promise((res, rej) => {
-      try {
-        const R = document.documentElement, cs = getComputedStyle(R);
-        W = innerWidth; H = innerHeight; dpr = Math.min(devicePixelRatio || 1, 2);
-        const pr = document.createElement('div');
-        pr.style.cssText = 'position:fixed;visibility:hidden;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)';
-        document.body.appendChild(pr);
-        const pc = getComputedStyle(pr), it = pc.paddingTop, ib = pc.paddingBottom;
-        pr.remove();
-        const css = raw.replace(/env\(safe-area-inset-top,0px\)/g, it).replace(/env\(safe-area-inset-bottom,0px\)/g, ib).replace(/:root/g, 'html');
-        const h = R.cloneNode(true) as HTMLElement;
-        h.querySelector('head')?.remove();
-        h.querySelectorAll('script,audio,#file').forEach((e) => e.remove());
-        /* canvas → imagen (barra de progreso, visualizador) */
-        const A = [...document.querySelectorAll<HTMLCanvasElement>('canvas:not(#pxo)')], B = [...h.querySelectorAll('canvas:not(#pxo)')];
-        A.forEach((c, i) => {
-          const b = B[i];
-          if (!b || !c.offsetWidth) return;
-          try {
-            const m = document.createElement('img');
-            m.className = c.className; m.id = c.id;
-            m.setAttribute('src', c.toDataURL('image/png'));
-            b.replaceWith(m);
-          } catch { /* canvas protegido */ }
-        });
-        h.querySelectorAll('#bar,#fs,#pxo').forEach((e) => e.remove());
-        const AI = [...document.querySelectorAll<HTMLInputElement>('input:not(#file)')], BI = [...h.querySelectorAll('input:not(#file)')];
-        AI.forEach((a, i) => { if (BI[i]) BI[i].setAttribute('value', a.value); });
-        /* solo se conservan las filas visibles; las demás quedan como espacio vacío del mismo alto */
-        const L = document.getElementById('list'), cl = h.querySelector<HTMLElement>('#list');
-        if (L && cl) {
-          [...L.children].forEach((ch, i) => {
-            const r = ch.getBoundingClientRect();
-            if (r.bottom < -40 || r.top > H + 40) {
-              const sp = document.createElement('div');
-              sp.style.height = r.height + 'px';
-              if (cl.children[i]) cl.children[i].replaceWith(sp);
-            }
-          });
-        }
-        if (cl) cl.style.marginTop = -scrollY + 'px';
-        const vars = ['--bg', '--fg', '--mut', '--card', '--acc'].map((v) => v + ':' + cs.getPropertyValue(v).trim()).join(';');
-        h.setAttribute('style', `${vars};color-scheme:${cs.colorScheme};box-sizing:border-box;padding-top:${it};padding-bottom:${ib};width:${W}px;height:${H}px;overflow:hidden`);
-        const st = document.createElement('style');
-        st.textContent = css;
-        h.insertBefore(st, h.firstChild);
-        // eslint-disable-next-line no-control-regex
-        const xml = new XMLSerializer().serializeToString(h).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '');
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * dpr)}" height="${Math.round(H * dpr)}" viewBox="0 0 ${W} ${H}"><foreignObject x="0" y="0" width="${W}" height="${H}">${xml}</foreignObject></svg>`;
-        const m = new Image();
-        m.onload = () => res(m);
-        m.onerror = () => rej(new Error('snap'));
-        m.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-      } catch (e) { rej(e); }
-    });
-  }
+const BLOBS: Record<'lsd' | 'rgb', { colors: string[]; alpha: number }> = {
+  lsd: { colors: ['#ff008c', '#00d2ff', '#ffe600'], alpha: 0.42 },
+  rgb: { colors: ['#ff2a2a', '#2aff5a', '#2a6bff'], alpha: 0.3 },
+};
 
-  function paint(): void {
-    if (!im || !cv || !ox) return;
-    const p = Math.min(1, (performance.now() - t0) / DUR), b = 1 + (MAXB - 1) * Math.pow(p, 1.5), bd = b * dpr;
-    const tw = Math.max(1, Math.round(cv.width / bd)), th = Math.max(1, Math.round(cv.height / bd));
-    let cur: CanvasImageSource = im, cw = cv.width, ch = cv.height, k = 0;
-    while (cw / 2 >= tw && ch / 2 >= th) {
-      const nw = Math.ceil(cw / 2), nh = Math.ceil(ch / 2), c = tc(k++ % 2, nw, nh), x = c.getContext('2d') as CanvasRenderingContext2D;
-      x.clearRect(0, 0, nw, nh); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, cw, ch, 0, 0, nw, nh);
-      cur = c; cw = nw; ch = nh;
-    }
-    const s = tc(2, tw, th), sx = s.getContext('2d') as CanvasRenderingContext2D;
-    sx.clearRect(0, 0, tw, th); sx.imageSmoothingQuality = 'high'; sx.drawImage(cur, 0, 0, cw, ch, 0, 0, tw, th);
-    ox.imageSmoothingEnabled = false;
-    ox.clearRect(0, 0, cv.width, cv.height);
-    ox.drawImage(s, 0, 0, tw, th, 0, 0, tw * bd, th * bd);
-  }
+const $id = (id: string): HTMLElement | null => document.getElementById(id);
+const blocks = (): HTMLElement[] => ['top', 'list', 'side'].map($id).filter((e): e is HTMLElement => !!e);
 
-  function tick(): void {
-    if (!run) return;
-    paint();
-    const n = performance.now();
-    if (n - snapT > 1500 && !busy) {
-      busy = 1; snapT = n;
-      snap().then((i) => { if (run) im = i; }).catch(() => {}).finally(() => { busy = 0; });
-    }
-    tmr = window.setTimeout(tick, 150);
-  }
-
-  async function start(speed = 1): Promise<boolean> {
-    run = 1; DUR = 55000 / speed;
-    try { im = await snap(); } catch { run = 0; return false; }
-    if (!run) return true;
-    cv = document.createElement('canvas');
-    cv.id = 'pxo'; cv.width = im.width; cv.height = im.height;
-    cv.style.width = W + 'px'; cv.style.height = H + 'px';
-    document.body.appendChild(cv);
-    ox = cv.getContext('2d');
-    t0 = snapT = performance.now();
-    paint();
-    requestAnimationFrame(() => requestAnimationFrame(() => cv && cv.classList.add('on')));
-    tick();
-    return true;
-  }
-
-  function stop(): void {
-    if (!run) return;
-    run = 0; clearTimeout(tmr);
-    const c = cv;
-    cv = null; im = null;
-    if (c) { c.classList.add('off'); c.classList.remove('on'); setTimeout(() => c.remove(), 700); }
-  }
-  return { start, stop };
-})();
-
-/* ---------- Control de inactividad ---------- */
-type FxName = 'melt' | 'pixel' | 'lsd' | 'rgb';
-const SPD: Record<FxName, number> = { melt: 10, pixel: 10, lsd: 10, rgb: 5 };
+interface Live {
+  name: FxName;
+  els: HTMLElement[];
+  anims: Animation[];
+  ov: HTMLElement | null;
+}
 
 export const IDLE = (() => {
-  const B = document.body;
-  let ms = 120000, tm = 0, on = false, cur: FxName | null = null, prev: FxName | null = null, fxc: 'melt' | 'lsd' | null = null;
-  let rm = 0, ri = 0, sp = 1, lx = -1, ly = -1, lt = 0, forceSp = 0;
-  const setM = (v: number) => { rm = v; RS.setProperty('--m', v.toFixed(3)); };
-  const ramp = (to: number, dur: number, done?: () => void) => {
-    clearInterval(ri);
-    const from = rm, t0 = performance.now();
-    ri = window.setInterval(() => {
-      const k = Math.min(1, (performance.now() - t0) / dur);
-      setM(from + (to - from) * k);
-      if (k >= 1) { clearInterval(ri); ri = 0; done?.(); }
-    }, dur > 5000 ? 250 : 40);
+  let ms = 120000, tm = 0, on = false, live: Live | null = null, prev: FxName | null = null;
+  let lx = -1, ly = -1, lt = 0, forceSp = 0;
+
+  const pick = (): FxName => {
+    const a = NAMES.filter((x) => x !== prev);
+    return a[(Math.random() * a.length) | 0];
   };
-  const pick = (l: FxName[]): FxName => { const a = l.filter((x) => x !== prev); return a[(Math.random() * a.length) | 0]; };
-  const inList = () => !S().fsOpen;
+  const enabled = (): boolean => ls.str('idlefx') !== '0';
+  const inList = (): boolean => !S().fsOpen;
+
+  /** movimiento de un bloque: 3 vueltas de amplitud creciente (0.25 → 0.6 → 1) y después sigue en bucle a tope */
+  function sway(el: HTMLElement, i: number, name: 'melt' | 'lsd', k: number): Animation[] {
+    el.style.transformOrigin = '50% 0';
+    const dur = (7000 + i * 1700) / k, dir = i % 2 ? 1 : -1, out: Animation[] = [];
+    let delay = 0;
+    for (const a of [0.25, 0.6, 1]) {
+      out.push(el.animate(
+        [{ transform: 'none' }, { transform: FRAME[name](a, dir), offset: 0.5 }, { transform: 'none' }],
+        { duration: dur, delay, iterations: a === 1 ? Infinity : 1, easing: 'ease-in-out' },
+      ));
+      delay += dur;
+    }
+    return out;
+  }
+
+  /** capa de manchas de color por encima de todo (una sola, sin eventos de puntero) */
+  function overlay(name: 'lsd' | 'rgb', k: number): { el: HTMLElement; anims: Animation[] } {
+    const { colors, alpha } = BLOBS[name];
+    const el = document.createElement('div');
+    el.id = 'fxo';
+    const anims: Animation[] = [];
+    colors.forEach((c, i) => {
+      const b = document.createElement('i');
+      b.style.setProperty('--c', c);
+      b.style.left = ['-10%', '45%', '15%'][i];
+      b.style.top = ['-15%', '10%', '55%'][i];
+      el.appendChild(b);
+      const x = (i % 2 ? -1 : 1) * 30, y = (i === 1 ? -1 : 1) * 25;
+      anims.push(b.animate(
+        [{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${x}vw,${y}vh) scale(1.25)` }],
+        { duration: (9000 + i * 2500) / k, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' },
+      ));
+    });
+    document.body.appendChild(el);
+    anims.push(el.animate([{ opacity: 0 }, { opacity: alpha }], { duration: 5000 / k, fill: 'forwards', easing: 'ease-in' }));
+    if (name === 'rgb') {
+      anims.push(el.animate([{ filter: 'hue-rotate(0deg)' }, { filter: 'hue-rotate(360deg)' }], { duration: 9000 / k, iterations: Infinity }));
+    }
+    return { el, anims };
+  }
 
   function begin(name: FxName): void {
-    cur = prev = name;
-    sp = forceSp || SPD[name];
+    prev = name;
+    const k = (forceSp || SPD[name]) / 10;
+    const l: Live = { name, els: [], anims: [], ov: null };
+    live = l;
     if (name === 'melt' || name === 'lsd') {
-      B.classList.remove('fx-melt', 'fx-lsd');
-      fxc = name;
-      B.classList.add('fx-' + name);
-      setM(0);
-      ramp(1, (name === 'melt' ? 50000 : 40000) / sp);
-    } else if (name === 'rgb') rgbStart(2200 / sp, [document.querySelector('header'), document.getElementById('list'), document.getElementById('side')]);
-    else PXL.start(sp).then((ok) => { if (!ok && on && cur === 'pixel') { cur = null; begin(pick(['melt', 'lsd', 'rgb'])); } });
+      l.els = blocks();
+      l.els.forEach((el, i) => l.anims.push(...sway(el, i, name, k)));
+    }
+    if (name === 'lsd' || name === 'rgb') {
+      const o = overlay(name, k);
+      l.ov = o.el;
+      l.anims.push(...o.anims);
+    }
+    /* el RGB cambia el color de acento solo en la cabecera y el menú: pocos elementos, nunca la lista entera */
+    if (name === 'rgb') rgbStart(2200 / (forceSp || SPD.rgb), [$id('top'), $id('side')]);
   }
 
-  function end(fast: boolean, done?: () => void): void {
-    const c = cur;
-    cur = null;
-    if (c === 'rgb') rgbStop(false); else if (c === 'pixel') PXL.stop();
-    if (fxc) {
-      const k = fxc;
-      ramp(0, fast ? 450 : 1600, () => {
-        if (fxc === k) { B.classList.remove('fx-' + k); fxc = null; RS.removeProperty('--m'); }
-        done?.();
-      });
-    } else done?.();
+  function end(fast: boolean): void {
+    const l = live;
+    live = null;
+    if (!l) return;
+    if (l.name === 'rgb') rgbStop(false);
+    const back = fast ? 250 : 900;
+    /* cada bloque vuelve suavemente a su sitio desde donde estuviera */
+    l.els.forEach((el) => {
+      const cur = getComputedStyle(el).transform;
+      l.anims.forEach((a) => { if ((a.effect as KeyframeEffect | null)?.target === el) a.cancel(); });
+      if (cur && cur !== 'none') {
+        el.animate([{ transform: cur }, { transform: 'none' }], { duration: back, easing: 'ease-out' }).onfinish = () => { el.style.transformOrigin = ''; };
+      } else el.style.transformOrigin = '';
+    });
+    const ov = l.ov;
+    if (ov) {
+      const op = getComputedStyle(ov).opacity;
+      l.anims.forEach((a) => a.cancel());
+      ov.animate([{ opacity: +op }, { opacity: 0 }], { duration: back, fill: 'forwards' }).onfinish = () => ov.remove();
+    }
   }
 
-  const arm = () => { clearTimeout(tm); tm = window.setTimeout(go, ms); };
+  const arm = (): void => { clearTimeout(tm); tm = window.setTimeout(go, ms); };
+
   function go(): void {
-    if (document.hidden || !inList() || reducedMotion()) { arm(); return; }
+    if (document.hidden || !inList() || reducedMotion() || !enabled()) { arm(); return; }
     on = true;
-    begin(pick(['melt', 'pixel', 'lsd', 'rgb']));
+    begin(pick());
   }
+
   function off(): void { on = false; end(true); }
+
   function act(e?: Event): void {
     const pe = e as PointerEvent | undefined;
     if (pe && pe.type === 'pointermove' && Math.hypot(pe.clientX - lx, pe.clientY - ly) < 3) return;
@@ -223,9 +164,9 @@ export const IDLE = (() => {
   return {
     init,
     /** para pruebas: IDLE.force('melt') */
-    force(n: FxName, s = 0): void { forceSp = s; on = true; clearTimeout(tm); end(true, () => begin(n)); },
+    force(n: FxName, s = 0): void { forceSp = s; on = true; clearTimeout(tm); end(true); begin(n); },
     get on() { return on; },
-    get cur() { return cur; },
+    get cur(): FxName | null { return live ? live.name : null; },
     setMs(v: number): void { ms = v; arm(); },
   };
 })();
